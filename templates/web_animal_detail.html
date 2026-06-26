@@ -1,0 +1,39 @@
+{% extends "web_base.html" %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h2>{{ animal.nombre }}</h2>
+    <div>
+      <a href="/animales/{{ animal.id }}/editar" class="btn btn-sm btn-warning">Editar</a>
+      <a href="/consulta/{{ animal.id }}" class="btn btn-sm btn-primary">Nueva Consulta</a>
+    </div>
+  </div>
+  <table>
+    <tr><th>Especie</th><td>{{ animal.especie or '' }}</td><th>Raza</th><td>{{ animal.raza or '' }}</td></tr>
+    <tr><th>Edad</th><td>{{ animal.edad or '' }}</td><th>Peso</th><td>{{ animal.peso or '' }}</td></tr>
+    <tr><th>Sexo</th><td>{{ animal.sexo or '' }}</td><th>Color</th><td>{{ animal.color or '' }}</td></tr>
+    <tr><th>Due\u00f1o</th><td>{{ animal.dueno_nombre }}</td><th>Tel\u00e9fono</th><td>{{ animal.dueno_telefono or '' }}</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Historial M\u00e9dico</h2>
+  {% if historial %}
+  <table>
+    <thead>
+      <tr><th>Fecha</th><th>Diagn\u00f3stico</th><th>Tratamiento</th><th>Doctor</th></tr>
+    </thead>
+    <tbody>
+      {% for r in historial %}
+      <tr>
+        <td>{{ r.fecha }}</td>
+        <td>{{ r.diagnostico }}</td>
+        <td>{{ r.tratamiento }}</td>
+        <td>{{ r.doctor or '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<div class="empty">Sin historial m\u00e9dico</div>{% endif %}
+</div>
+{% endblock %}

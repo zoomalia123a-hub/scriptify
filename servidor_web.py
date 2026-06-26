@@ -33,8 +33,19 @@ def serve_examen(filename):
         return redirect(storage.get_url(filename, 'examenes'))
     return send_from_directory(storage.LOCAL_DIRS['examenes'], filename)
 
+def login_required(f):
+    from functools import wraps
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if "doctor" not in session:
+            return redirect(url_for("index"))
+        return f(*args, **kwargs)
+    return wrapper
+
 @app.route("/", methods=["GET"])
 def index():
+    if "doctor" in session:
+        return redirect(url_for("dashboard"))
     conn = database.get_db()
     doctores = [r["nombre"] for r in database.fetchall(conn,
         "SELECT DISTINCT nombre FROM doctores ORDER BY nombre")]
@@ -47,17 +58,47 @@ def login():
     if not doctor:
         return redirect(url_for("index", error="Selecciona un doctor"))
     session["doctor"] = doctor
-    return redirect(url_for("pacientes"))
+    return redirect(url_for("dashboard"))
+
+@app.route("/admin_login", methods=["POST"])
+def admin_login():
+    user = request.form.get("username", "").strip()
+    pwd = request.form.get("password", "").strip()
+    conn = database.get_db()
+    u = database.fetchone(conn,
+        "SELECT * FROM usuarios WHERE username=? AND password=? AND activo=1", (user, pwd))
+    conn.close()
+    if u:
+        session["doctor"] = u["nombre"]
+        session["rol"] = u["rol"]
+        session["user_id"] = u["id"]
+        return redirect(url_for("dashboard"))
+    return redirect(url_for("index", error="Credenciales invalidas"))
 
 @app.route("/logout")
 def logout():
-    session.pop("doctor", None)
+    session.clear()
     return redirect(url_for("index"))
 
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    conn = database.get_db()
+    hoy = str(date.today())
+    total_duenos = database.fetchone(conn, "SELECT COUNT(*) as cnt FROM duenos")["cnt"]
+    total_animales = database.fetchone(conn, "SELECT COUNT(*) as cnt FROM animales")["cnt"]
+    citas_hoy = database.fetchone(conn,
+        "SELECT COUNT(*) as cnt FROM citas WHERE fecha=? AND estado='pendiente'", (hoy,))["cnt"]
+    consultas_hoy = database.fetchone(conn,
+        "SELECT COUNT(*) as cnt FROM registros_medicos WHERE fecha=?", (hoy,))["cnt"]
+    conn.close()
+    return render_template("web_dashboard.html", total_duenos=total_duenos,
+                           total_animales=total_animales, citas_hoy=citas_hoy,
+                           consultas_hoy=consultas_hoy, doctor=session["doctor"])
+
 @app.route("/pacientes")
+@login_required
 def pacientes():
-    if "doctor" not in session:
-        return redirect(url_for("index"))
     conn = database.get_db()
     rows = database.fetchall(conn,
         "SELECT a.id, a.nombre, a.especie, a.raza, a.edad, d.nombre as dueno_nombre "
@@ -71,6 +112,177 @@ def pacientes():
     conn.close()
     return render_template("web_pacientes.html", pacientes=rows, doctor=doctorname,
                            pendientes=pendientes["cnt"] if pendientes else 0)
+
+# ===== DUE\u00d1OS =====
+@app.route("/duenos")
+@login_required
+def listar_duenos():
+    conn = database.get_db()
+    duenos = database.fetchall(conn, "SELECT * FROM duenos ORDER BY id DESC")
+    conn.close()
+    return render_template("web_duenos.html", duenos=duenos, doctor=session["doctor"])
+
+@app.route("/duenos/nuevo", methods=["GET", "POST"])
+@login_required
+def crear_dueno():
+    conn = database.get_db()
+    if request.method == "POST":
+        database.execute(conn,
+            "INSERT INTO duenos (nombre, telefono, email, direccion, dni) VALUES (?,?,?,?,?)",
+            (request.form["nombre"], request.form.get("telefono",""),
+             request.form.get("email",""), request.form.get("direccion",""),
+             request.form.get("dni","")))
+        conn.commit()
+        conn.close()
+        return redirect(url_for("listar_duenos"))
+    conn.close()
+    return render_template("web_dueno_form.html", dueno=None, doctor=session["doctor"])
+
+@app.route("/duenos/<int:id>/editar", methods=["GET", "POST"])
+@login_required
+def editar_dueno(id):
+    conn = database.get_db()
+    if request.method == "POST":
+        database.execute(conn,
+            "UPDATE duenos SET nombre=?, telefono=?, email=?, direccion=?, dni=? WHERE id=?",
+            (request.form["nombre"], request.form.get("telefono",""),
+             request.form.get("email",""), request.form.get("direccion",""),
+             request.form.get("dni",""), id))
+        conn.commit()
+        conn.close()
+        return redirect(url_for("listar_duenos"))
+    dueno = database.fetchone(conn, "SELECT * FROM duenos WHERE id=?", (id,))
+    conn.close()
+    return render_template("web_dueno_form.html", dueno=dueno, doctor=session["doctor"])
+
+@app.route("/duenos/<int:id>/eliminar")
+@login_required
+def eliminar_dueno(id):
+    conn = database.get_db()
+    database.execute(conn, "DELETE FROM duenos WHERE id=?", (id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("listar_duenos"))
+
+# ===== ANIMALES =====
+@app.route("/animales")
+@login_required
+def listar_animales():
+    conn = database.get_db()
+    animales = database.fetchall(conn,
+        "SELECT a.*, d.nombre as dueno_nombre FROM animales a "
+        "JOIN duenos d ON a.id_dueno = d.id ORDER BY a.id DESC")
+    conn.close()
+    return render_template("web_animales.html", animales=animales, doctor=session["doctor"])
+
+@app.route("/animales/nuevo", methods=["GET", "POST"])
+@login_required
+def crear_animal():
+    conn = database.get_db()
+    if request.method == "POST":
+        database.execute(conn,
+            "INSERT INTO animales (nombre, especie, raza, edad, peso, sexo, color, id_dueno) "
+            "VALUES (?,?,?,?,?,?,?,?)",
+            (request.form["nombre"], request.form.get("especie",""),
+             request.form.get("raza",""), int(request.form.get("edad",0)),
+             float(request.form.get("peso",0)), request.form.get("sexo",""),
+             request.form.get("color",""), int(request.form["id_dueno"])))
+        conn.commit()
+        conn.close()
+        return redirect(url_for("listar_animales"))
+    duenos = database.fetchall(conn, "SELECT * FROM duenos ORDER BY nombre")
+    conn.close()
+    return render_template("web_animal_form.html", duenos=duenos, animal=None, doctor=session["doctor"])
+
+@app.route("/animales/<int:id>/editar", methods=["GET", "POST"])
+@login_required
+def editar_animal(id):
+    conn = database.get_db()
+    if request.method == "POST":
+        database.execute(conn,
+            "UPDATE animales SET nombre=?, especie=?, raza=?, edad=?, peso=?, sexo=?, color=?, id_dueno=? WHERE id=?",
+            (request.form["nombre"], request.form.get("especie",""), request.form.get("raza",""),
+             int(request.form.get("edad",0)), float(request.form.get("peso",0)),
+             request.form.get("sexo",""), request.form.get("color",""),
+             int(request.form["id_dueno"]), id))
+        conn.commit()
+        conn.close()
+        return redirect(url_for("listar_animales"))
+    animal = database.fetchone(conn, "SELECT * FROM animales WHERE id=?", (id,))
+    duenos = database.fetchall(conn, "SELECT * FROM duenos ORDER BY nombre")
+    conn.close()
+    return render_template("web_animal_form.html", animal=animal, duenos=duenos, doctor=session["doctor"])
+
+@app.route("/animales/<int:id>/eliminar")
+@login_required
+def eliminar_animal(id):
+    conn = database.get_db()
+    database.execute(conn, "DELETE FROM animales WHERE id=?", (id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("listar_animales"))
+
+@app.route("/animales/<int:id>")
+@login_required
+def ver_animal(id):
+    conn = database.get_db()
+    animal = database.fetchone(conn,
+        "SELECT a.*, d.nombre as dueno_nombre, d.telefono as dueno_telefono "
+        "FROM animales a JOIN duenos d ON a.id_dueno = d.id WHERE a.id=?", (id,))
+    historial = database.fetchall(conn,
+        "SELECT * FROM registros_medicos WHERE id_animal=? ORDER BY fecha DESC", (id,))
+    conn.close()
+    return render_template("web_animal_detail.html", animal=animal, historial=historial, doctor=session["doctor"])
+
+# ===== CITAS =====
+@app.route("/citas")
+@login_required
+def listar_citas():
+    conn = database.get_db()
+    citas = database.fetchall(conn,
+        "SELECT c.*, a.nombre as animal_nombre, d.nombre as dueno_nombre "
+        "FROM citas c JOIN animales a ON c.id_animal = a.id "
+        "JOIN duenos d ON c.id_dueno = d.id ORDER BY c.fecha DESC, c.id DESC")
+    conn.close()
+    return render_template("web_citas.html", citas=citas, doctor=session["doctor"])
+
+@app.route("/citas/nuevo", methods=["GET", "POST"])
+@login_required
+def crear_cita():
+    conn = database.get_db()
+    if request.method == "POST":
+        database.execute(conn,
+            "INSERT INTO citas (id_animal, id_dueno, fecha, motivo, tipo, precio) VALUES (?,?,?,?,?,?)",
+            (request.form["id_animal"], request.form["id_dueno"],
+             request.form["fecha"], request.form["motivo"],
+             request.form.get("tipo","veterinaria"),
+             float(request.form.get("precio",0))))
+        conn.commit()
+        conn.close()
+        return redirect(url_for("listar_citas"))
+    animales = database.fetchall(conn,
+        "SELECT a.*, d.nombre as dueno_nombre FROM animales a "
+        "JOIN duenos d ON a.id_dueno = d.id")
+    conn.close()
+    return render_template("web_cita_form.html", animales=animales, doctor=session["doctor"], hoy=str(date.today()))
+
+@app.route("/citas/<int:id>/completar")
+@login_required
+def completar_cita(id):
+    conn = database.get_db()
+    database.execute(conn, "UPDATE citas SET estado='completada' WHERE id=?", (id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("listar_citas"))
+
+@app.route("/citas/<int:id>/cancelar")
+@login_required
+def cancelar_cita(id):
+    conn = database.get_db()
+    database.execute(conn, "UPDATE citas SET estado='cancelada' WHERE id=?", (id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("listar_citas"))
 
 @app.route("/cobros")
 def web_cobros():

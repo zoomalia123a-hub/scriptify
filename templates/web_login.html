@@ -3,33 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Acceso Doctor</title>
+<title>SCRIPTYFY - Acceso</title>
 <style>
 * { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'Segoe UI',Arial,sans-serif; background:#f0f4f8; display:flex; min-height:100vh; align-items:center; justify-content:center; padding:16px; }
-.card { background:white; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.1); padding:24px; width:100%; max-width:380px; }
-h1 { font-size:20px; color:#2c3e50; margin-bottom:20px; text-align:center; }
-select,button { width:100%; padding:14px; font-size:16px; border-radius:8px; margin-bottom:12px; }
-select { border:1px solid #ddd; background:white; }
-.btn { background:#3498db; color:white; border:none; font-weight:bold; cursor:pointer; }
-.btn:hover { background:#2980b9; }
+body { font-family:'Segoe UI',Arial,sans-serif; background:#1a1a2e; display:flex; min-height:100vh; align-items:center; justify-content:center; padding:16px; }
+.card { background:white; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,.3); padding:32px; width:100%; max-width:400px; }
+h1 { font-size:22px; color:#2c3e50; margin-bottom:4px; text-align:center; }
+.sub { color:#7f8c8d; font-size:13px; text-align:center; margin-bottom:20px; }
+.logo { text-align:center; margin-bottom:16px; font-size:40px; }
+select,input { width:100%; padding:14px; font-size:15px; border-radius:8px; margin-bottom:12px; border:1px solid #ddd; }
+select { background:white; }
+.btn { width:100%; padding:14px; font-size:15px; border-radius:8px; border:none; font-weight:bold; cursor:pointer; color:white; }
+.btn-primary { background:#1abc9c; }
+.btn-primary:hover { background:#16a085; }
+.btn-outline { background:transparent; color:#7f8c8d; border:1px solid #ddd; margin-top:4px; }
+.btn-outline:hover { background:#f5f5f5; }
 .error { color:#e74c3c; font-size:13px; text-align:center; margin-bottom:10px; }
+.tabs { display:flex; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid #ddd; }
+.tab { flex:1; padding:10px; text-align:center; cursor:pointer; font-size:13px; background:white; transition:all .2s; }
+.tab.active { background:#1abc9c; color:white; border-color:#1abc9c; }
+.tab-content { display:none; }
+.tab-content.active { display:block; }
 </style>
 </head>
 <body>
 <div class="card">
-<h1>🔬 SCRIPTYFY</h1>
-<p style="text-align:center;color:#555;margin-bottom:16px;">Acceso para Doctores</p>
-<form method="POST" action="/login">
-<select name="doctor" required>
-<option value="">Selecciona tu nombre...</option>
-{% for d in doctores %}
-<option value="{{ d }}">{{ d }}</option>
-{% endfor %}
-</select>
-<button class="btn" type="submit">Ingresar</button>
-</form>
-{% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <div class="logo">🐾</div>
+  <h1>SCRIPTYFY</h1>
+  <div class="sub">Sistema de Gesti\u00f3n Veterinaria</div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('doctor')">Doctor</div>
+    <div class="tab" onclick="switchTab('admin')">Admin</div>
+  </div>
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <div id="tab-doctor" class="tab-content active">
+    <form method="POST" action="/login">
+      <select name="doctor" required>
+        <option value="">Selecciona tu nombre...</option>
+        {% for d in doctores %}
+        <option value="{{ d }}">{{ d }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-primary" type="submit">Ingresar como Doctor</button>
+    </form>
+  </div>
+  <div id="tab-admin" class="tab-content">
+    <form method="POST" action="/admin_login">
+      <input name="username" placeholder="Usuario" required>
+      <input name="password" type="password" placeholder="Contrase\u00f1a" required>
+      <button class="btn btn-primary" type="submit">Ingresar como Admin</button>
+    </form>
+  </div>
 </div>
+<script>
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  if(tab=='doctor'){ document.querySelectorAll('.tab')[0].classList.add('active'); document.getElementById('tab-doctor').classList.add('active'); }
+  else { document.querySelectorAll('.tab')[1].classList.add('active'); document.getElementById('tab-admin').classList.add('active'); }
+}
+</script>
 </body>
 </html>

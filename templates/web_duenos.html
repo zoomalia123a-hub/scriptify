@@ -1,0 +1,31 @@
+{% extends "web_base.html" %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h2>Due\u00f1os</h2>
+    <a href="/duenos/nuevo" class="btn btn-primary">+ Nuevo Due\u00f1o</a>
+  </div>
+  {% if duenos %}
+  <table>
+    <thead>
+      <tr><th>ID</th><th>DNI</th><th>Nombre</th><th>Tel\u00e9fono</th><th>Email</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+      {% for d in duenos %}
+      <tr>
+        <td>{{ d.id }}</td>
+        <td>{{ d.dni or '' }}</td>
+        <td>{{ d.nombre }}</td>
+        <td>{{ d.telefono or '' }}</td>
+        <td>{{ d.email or '' }}</td>
+        <td>
+          <a href="/duenos/{{ d.id }}/editar" class="btn btn-sm btn-info">Editar</a>
+          <a href="/duenos/{{ d.id }}/eliminar" class="btn btn-sm btn-danger" onclick="return confirm('Eliminar?')">Eliminar</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<div class="empty">No hay due\u00f1os registrados</div>{% endif %}
+</div>
+{% endblock %}

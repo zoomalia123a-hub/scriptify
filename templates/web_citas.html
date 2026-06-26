@@ -1,0 +1,38 @@
+{% extends "web_base.html" %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h2>Citas</h2>
+    <a href="/citas/nuevo" class="btn btn-primary">+ Nueva Cita</a>
+  </div>
+  {% if citas %}
+  <table>
+    <thead>
+      <tr><th>Fecha</th><th>Paciente</th><th>Due\u00f1o</th><th>Motivo</th><th>Tipo</th><th>Estado</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+      {% for c in citas %}
+      <tr>
+        <td>{{ c.fecha }}</td>
+        <td>{{ c.animal_nombre }}</td>
+        <td>{{ c.dueno_nombre }}</td>
+        <td>{{ c.motivo }}</td>
+        <td>{{ c.tipo or 'veterinaria' }}</td>
+        <td>
+          {% if c.estado == 'pendiente' %}<span class="badge badge-warning">Pendiente</span>
+          {% elif c.estado == 'completada' %}<span class="badge badge-success">Completada</span>
+          {% else %}<span class="badge badge-danger">Cancelada</span>{% endif %}
+        </td>
+        <td>
+          {% if c.estado == 'pendiente' %}
+          <a href="/citas/{{ c.id }}/completar" class="btn btn-sm btn-success">Completar</a>
+          <a href="/citas/{{ c.id }}/cancelar" class="btn btn-sm btn-danger" onclick="return confirm('Cancelar cita?')">Cancelar</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<div class="empty">No hay citas registradas</div>{% endif %}
+</div>
+{% endblock %}

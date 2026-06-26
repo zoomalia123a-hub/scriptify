@@ -1,0 +1,66 @@
+{% extends "web_base.html" %}
+{% block content %}
+<div class="card" style="max-width:700px;margin:0 auto">
+  <h2>{% if animal %}Editar Paciente{% else %}Nuevo Paciente{% endif %}</h2>
+  <form method="POST">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nombre</label>
+        <input name="nombre" value="{{ animal.nombre if animal else '' }}" required>
+      </div>
+      <div class="form-group">
+        <label>Especie</label>
+        <select name="especie">
+          <option value="Perro" {% if animal and animal.especie=='Perro' %}selected{% endif %}>Perro</option>
+          <option value="Gato" {% if animal and animal.especie=='Gato' %}selected{% endif %}>Gato</option>
+          <option value="Ave" {% if animal and animal.especie=='Ave' %}selected{% endif %}>Ave</option>
+          <option value="Conejo" {% if animal and animal.especie=='Conejo' %}selected{% endif %}>Conejo</option>
+          <option value="Roedor" {% if animal and animal.especie=='Roedor' %}selected{% endif %}>Roedor</option>
+          <option value="Reptil" {% if animal and animal.especie=='Reptil' %}selected{% endif %}>Reptil</option>
+          <option value="Otro" {% if animal and animal.especie=='Otro' %}selected{% endif %}>Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Raza</label>
+        <input name="raza" value="{{ animal.raza if animal else '' }}">
+      </div>
+      <div class="form-group">
+        <label>Edad</label>
+        <input name="edad" type="number" value="{{ animal.edad if animal else '' }}">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Peso (kg)</label>
+        <input name="peso" type="number" step="0.1" value="{{ animal.peso if animal else '' }}">
+      </div>
+      <div class="form-group">
+        <label>Sexo</label>
+        <select name="sexo">
+          <option value="">Seleccionar</option>
+          <option value="Macho" {% if animal and animal.sexo=='Macho' %}selected{% endif %}>Macho</option>
+          <option value="Hembra" {% if animal and animal.sexo=='Hembra' %}selected{% endif %}>Hembra</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Color</label>
+      <input name="color" value="{{ animal.color if animal else '' }}">
+    </div>
+    <div class="form-group">
+      <label>Due\u00f1o</label>
+      <select name="id_dueno" required>
+        {% for d in duenos %}
+        <option value="{{ d.id }}" {% if animal and animal.id_dueno==d.id %}selected{% endif %}>{{ d.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button type="submit" class="btn btn-primary">Guardar</button>
+      <a href="/animales" class="btn btn-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

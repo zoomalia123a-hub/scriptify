@@ -1,0 +1,34 @@
+{% extends "web_base.html" %}
+{% block content %}
+<div class="card" style="max-width:600px;margin:0 auto">
+  <h2>{% if dueno %}Editar Due\u00f1o{% else %}Nuevo Due\u00f1o{% endif %}</h2>
+  <form method="POST">
+    <div class="form-group">
+      <label>Nombre</label>
+      <input name="nombre" value="{{ dueno.nombre if dueno else '' }}" required>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>DNI</label>
+        <input name="dni" value="{{ dueno.dni if dueno else '' }}">
+      </div>
+      <div class="form-group">
+        <label>Tel\u00e9fono</label>
+        <input name="telefono" value="{{ dueno.telefono if dueno else '' }}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input name="email" type="email" value="{{ dueno.email if dueno else '' }}">
+    </div>
+    <div class="form-group">
+      <label>Direcci\u00f3n</label>
+      <input name="direccion" value="{{ dueno.direccion if dueno else '' }}">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button type="submit" class="btn btn-primary">Guardar</button>
+      <a href="/duenos" class="btn btn-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

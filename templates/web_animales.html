@@ -1,0 +1,33 @@
+{% extends "web_base.html" %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h2>Pacientes</h2>
+    <a href="/animales/nuevo" class="btn btn-primary">+ Nuevo Paciente</a>
+  </div>
+  {% if animales %}
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Nombre</th><th>Especie</th><th>Raza</th><th>Edad</th><th>Due\u00f1o</th><th>Acciones</th></tr>
+    </thead>
+    <tbody>
+      {% for a in animales %}
+      <tr>
+        <td>{{ a.id }}</td>
+        <td><a href="/animales/{{ a.id }}" style="color:#1abc9c;text-decoration:none;font-weight:600">{{ a.nombre }}</a></td>
+        <td>{{ a.especie }}</td>
+        <td>{{ a.raza or '' }}</td>
+        <td>{{ a.edad or '' }}</td>
+        <td>{{ a.dueno_nombre }}</td>
+        <td>
+          <a href="/animales/{{ a.id }}" class="btn btn-sm btn-info">Ver</a>
+          <a href="/animales/{{ a.id }}/editar" class="btn btn-sm btn-warning">Editar</a>
+          <a href="/animales/{{ a.id }}/eliminar" class="btn btn-sm btn-danger" onclick="return confirm('Eliminar?')">Eliminar</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<div class="empty">No hay pacientes registrados</div>{% endif %}
+</div>
+{% endblock %}
