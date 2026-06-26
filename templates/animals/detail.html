@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="detalle">
+    <h2>{{ animal.nombre }}</h2>
+    <p><strong>Especie:</strong> {{ animal.especie }}</p>
+    <p><strong>Raza:</strong> {{ animal.raza or '-' }}</p>
+    <p><strong>Edad:</strong> {{ animal.edad }} años</p>
+    <p><strong>Peso:</strong> {{ animal.peso }} kg</p>
+    <p><strong>Dueño:</strong> {{ animal.dueno_nombre }} ({{ animal.dueno_telefono }})</p>
+</div>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin: 2rem 0 1rem;">
+    <h3>Historial Médico</h3>
+    <a href="{{ url_for('crear_registro') }}?id_animal={{ animal.id }}" class="btn btn-secondary">+ Nuevo Registro</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Fecha</th>
+            <th>Diagnóstico</th>
+            <th>Tratamiento</th>
+            <th>Observaciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in historial %}
+        <tr>
+            <td>{{ r.id }}</td>
+            <td>{{ r.fecha }}</td>
+            <td>{{ r.diagnostico }}</td>
+            <td>{{ r.tratamiento }}</td>
+            <td>{{ r.observaciones or '-' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center; color:#94a3b8;">Sin registros médicos</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="{{ url_for('listar_animales') }}" class="btn btn-secondary" style="margin-top:1rem;">← Volver</a>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="form-card">
+    <h2>Nueva Cita</h2>
+    <p class="subtitulo">Agenda una cita para una mascota</p>
+
+    <form method="POST">
+        <div class="form-group">
+            <label>Animal</label>
+            <select name="id_animal" id="animalSelect" required onchange="actualizarDueno()">
+                <option value="">Seleccione un animal</option>
+                {% for a in animales %}
+                <option value="{{ a.id }}" data-dueno="{{ a.id_dueno }}">{{ a.nombre }} ({{ a.especie }}) - Dueño: {{ a.dueno_nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>ID del Dueño</label>
+            <input type="number" name="id_dueno" id="duenoInput" readonly required>
+        </div>
+        <div class="form-group">
+            <label>Fecha</label>
+            <input type="date" name="fecha" required>
+        </div>
+        <div class="form-group">
+            <label>Motivo</label>
+            <textarea name="motivo" rows="3" required></textarea>
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+            <button type="submit" class="btn btn-success">Agendar</button>
+            <a href="{{ url_for('listar_citas') }}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function actualizarDueno() {
+    const sel = document.getElementById('animalSelect');
+    const opt = sel.options[sel.selectedIndex];
+    document.getElementById('duenoInput').value = opt ? opt.getAttribute('data-dueno') : '';
+}
+</script>
+{% endblock %}

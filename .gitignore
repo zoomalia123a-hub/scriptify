@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+veterinaria.db
+backups/
+.web_secret
+.env
+env/
+venv/
+.venv/

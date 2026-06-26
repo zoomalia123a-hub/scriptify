@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Consulta Guardada</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Segoe UI',Arial,sans-serif; background:#f0f4f8; display:flex; min-height:100vh; align-items:center; justify-content:center; padding:16px; }
+.card { background:white; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.1); padding:28px 20px; width:100%; max-width:360px; text-align:center; }
+.icono { font-size:42px; margin-bottom:12px; }
+h1 { font-size:18px; color:#2c3e50; margin-bottom:6px; }
+p { color:#555; font-size:13px; margin-bottom:3px; }
+.detalles { background:#f8f9fa; border-radius:8px; padding:10px; margin:14px 0; text-align:left; font-size:13px; color:#333; line-height:1.5; }
+.detalles span { font-weight:bold; }
+.btn { display:block; padding:12px; font-size:14px; border-radius:8px; font-weight:bold; cursor:pointer; text-decoration:none; margin-top:8px; }
+.btn-primary { background:#2ecc71; color:white; }
+.btn-secondary { background:#3498db; color:white; }
+.btn-warning { background:#e67e22; color:white; }
+.btn-gray { background:#95a5a6; color:white; }
+</style>
+</head>
+<body>
+<div class="card">
+<div class="icono">✅</div>
+<h1>Consulta registrada</h1>
+<p>Paciente: <strong>{{ paciente }}</strong></p>
+<div class="detalles">
+{{ fecha }} {{ hora }}<br>
+{{ doctor }}<br>
+{{ diagnostico }}
+</div>
+<a href="/agregar_insumos/{{ registro_id }}" class="btn btn-warning">+ Agregar Insumos</a>
+<a href="/pendientes_insumos" class="btn btn-secondary">Pendientes de hoy</a>
+<a href="/pacientes" class="btn btn-gray">Volver a pacientes</a>
+<a href="/consulta/{{ paciente_id }}" class="btn btn-primary">+ Otra consulta</a>
+</div>
+</body>
+</html>

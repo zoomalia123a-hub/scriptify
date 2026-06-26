@@ -1,0 +1,12 @@
+INSERT OR IGNORE INTO duenos (id, nombre, telefono, email, direccion) VALUES (1, 'Maria Garcia', '555-0101', 'maria@email.com', 'Av. Principal 123');
+INSERT OR IGNORE INTO duenos (id, nombre, telefono, email, direccion) VALUES (2, 'Carlos Lopez', '555-0102', 'carlos@email.com', 'Calle Secundaria 456');
+INSERT OR IGNORE INTO duenos (id, nombre, telefono, email, direccion) VALUES (3, 'Ana Martinez', '555-0103', 'ana@email.com', 'Boulevard Central 789');
+INSERT OR IGNORE INTO animales (id, nombre, especie, raza, edad, peso, id_dueno) VALUES (1, 'Max', 'Perro', 'Labrador', 3, 25.5, 1);
+INSERT OR IGNORE INTO animales (id, nombre, especie, raza, edad, peso, id_dueno) VALUES (2, 'Luna', 'Gato', 'Siames', 2, 4.2, 1);
+INSERT OR IGNORE INTO animales (id, nombre, especie, raza, edad, peso, id_dueno) VALUES (3, 'Rocky', 'Perro', 'Bulldog', 5, 30.0, 2);
+INSERT OR IGNORE INTO animales (id, nombre, especie, raza, edad, peso, id_dueno) VALUES (4, 'Milo', 'Gato', 'Persa', 1, 3.8, 3);
+INSERT OR IGNORE INTO citas (id, id_animal, id_dueno, fecha, motivo, estado) VALUES (1, 1, 1, '2026-06-21', 'Vacunacion anual', 'pendiente');
+INSERT OR IGNORE INTO citas (id, id_animal, id_dueno, fecha, motivo, estado) VALUES (2, 3, 2, '2026-06-22', 'Revision general', 'pendiente');
+INSERT OR IGNORE INTO citas (id, id_animal, id_dueno, fecha, motivo, estado) VALUES (3, 2, 1, '2026-06-21', 'Corte de unas', 'completada');
+INSERT OR IGNORE INTO registros_medicos (id, id_animal, fecha, diagnostico, tratamiento, observaciones) VALUES (1, 1, '2026-06-01', 'Otitis leve', 'Limpiador otico y antibiotico', 'Pendiente de revision en 2 semanas');
+INSERT OR IGNORE INTO registros_medicos (id, id_animal, fecha, diagnostico, tratamiento, observaciones) VALUES (2, 3, '2026-05-15', 'Sobrepeso', 'Dieta hipocalorica y ejercicio', 'Bajo 0.5kg en primer mes');

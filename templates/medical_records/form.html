@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="form-card">
+    <h2>Nuevo Registro Médico</h2>
+    <p class="subtitulo">Agrega un diagnóstico o tratamiento a una mascota</p>
+
+    <form method="POST">
+        <div class="form-group">
+            <label>Animal</label>
+            <select name="id_animal" required>
+                <option value="">Seleccione un animal</option>
+                {% for a in animales %}
+                <option value="{{ a.id }}" {{ 'selected' if request.args.get('id_animal')|string == a.id|string else '' }}>
+                    {{ a.nombre }} ({{ a.especie }}) - {{ a.dueno_nombre }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Diagnóstico</label>
+            <textarea name="diagnostico" rows="2" required></textarea>
+        </div>
+        <div class="form-group">
+            <label>Tratamiento</label>
+            <textarea name="tratamiento" rows="2" required></textarea>
+        </div>
+        <div class="form-group">
+            <label>Observaciones</label>
+            <textarea name="observaciones" rows="2"></textarea>
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+            <button type="submit" class="btn btn-success">Guardar Registro</button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

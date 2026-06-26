@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="cards">
+    <div class="card">
+        <div class="numero">{{ total_duenos }}</div>
+        <div class="etiqueta">Dueños registrados</div>
+    </div>
+    <div class="card">
+        <div class="numero">{{ total_animales }}</div>
+        <div class="etiqueta">Animales registrados</div>
+    </div>
+    <div class="card">
+        <div class="numero">{{ citas_hoy }}</div>
+        <div class="etiqueta">Citas para hoy</div>
+    </div>
+</div>
+
+<div class="form-card">
+    <h2>Acciones rápidas</h2>
+    <div class="acciones-rapidas">
+        <a href="{{ url_for('crear_dueno') }}" class="btn btn-primary">+ Nuevo Dueño</a>
+        <a href="{{ url_for('crear_animal') }}" class="btn btn-success">+ Nuevo Animal</a>
+        <a href="{{ url_for('crear_cita') }}" class="btn btn-warning">+ Nueva Cita</a>
+        <a href="{{ url_for('crear_registro') }}" class="btn btn-secondary">+ Registro Médico</a>
+    </div>
+</div>
+{% endblock %}

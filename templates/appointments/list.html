@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h2>Citas</h2>
+    <a href="{{ url_for('crear_cita') }}" class="btn btn-primary">+ Nueva Cita</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Animal</th>
+            <th>Dueño</th>
+            <th>Fecha</th>
+            <th>Motivo</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in citas %}
+        <tr>
+            <td>{{ c.id }}</td>
+            <td>{{ c.animal_nombre }}</td>
+            <td>{{ c.dueno_nombre }}</td>
+            <td>{{ c.fecha }}</td>
+            <td>{{ c.motivo }}</td>
+            <td class="estado-{{ c.estado }}">{{ c.estado }}</td>
+            <td>
+                {% if c.estado == 'pendiente' %}
+                <a href="{{ url_for('completar_cita', id=c.id) }}" class="btn btn-success" style="padding:0.3rem 0.6rem; font-size:0.85rem;">Completar</a>
+                <a href="{{ url_for('cancelar_cita', id=c.id) }}" class="btn btn-danger" style="padding:0.3rem 0.6rem; font-size:0.85rem;">Cancelar</a>
+                {% else %}
+                <span style="color:#94a3b8;">—</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center; color:#94a3b8;">No hay citas registradas</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
