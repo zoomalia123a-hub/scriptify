@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><title>Ficha Cl&iacute;nica - {{ a.nombre }}</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif}
+body{padding:20px;background:#fff;color:#333}
+h1{font-size:22px;margin-bottom:4px}
+h2{font-size:16px;margin:16px 0 8px;border-bottom:2px solid #1abc9c;padding-bottom:4px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:14px}
+.info-grid div{padding:4px 0}
+table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid #eee}
+th{background:#f5f5f5;font-size:11px;text-transform:uppercase}
+@media print{body{padding:10px}.no-print{display:none!important}}
+</style>
+</head><body>
+<div class="no-print" style="text-align:center;margin-bottom:12px">
+  <button onclick="window.print()" style="padding:8px 16px;background:#1abc9c;color:white;border:none;border-radius:8px;cursor:pointer"><i class="fas fa-print"></i> Imprimir</button>
+  <a href="javascript:history.back()" style="padding:8px 16px;background:#95a5a6;color:white;border:none;border-radius:8px;text-decoration:none;margin-left:8px">Cerrar</a>
+</div>
+<h1>SCRIPTYFY</h1>
+<p style="color:#555;margin-bottom:16px">Ficha Cl&iacute;nica - {{ a.nombre }}</p>
+<h2>Datos del Paciente</h2>
+<div class="info-grid">
+  <div><strong>Nombre:</strong> {{ a.nombre }}</div>
+  <div><strong>Especie:</strong> {{ a.especie }}</div>
+  <div><strong>Raza:</strong> {{ a.raza or '-' }}</div>
+  <div><strong>Edad:</strong> {{ a.edad }} a&ntilde;os</div>
+  <div><strong>Peso:</strong> {% if a.peso is not none and a.peso>0 %}{{ a.peso }} kg{% else %}-{% endif %}</div>
+  <div><strong>Sexo:</strong> {{ a.sexo or '-' }}</div>
+  <div><strong>Color:</strong> {{ a.color or '-' }}</div>
+  <div><strong>Esterilizado:</strong> {{ 'S&iacute;' if a.esterilizado else 'No' }}</div>
+</div>
+<h2>Datos del Due&ntilde;o</h2>
+<div class="info-grid">
+  <div><strong>Nombre:</strong> {{ a.dueno_nombre }}</div>
+  <div><strong>Tel&eacute;fono:</strong> {{ a.telefono or '-' }}</div>
+  <div><strong>Direcci&oacute;n:</strong> {{ a.direccion or '-' }}</div>
+</div>
+<h2>Historial M&eacute;dico</h2>
+{% if historial %}
+<table><thead><tr><th>Fecha</th><th>Doctor</th><th>Diagn&oacute;stico</th><th>Tratamiento</th><th>Peso</th></tr></thead><tbody>
+{% for r in historial %}<tr><td>{{ r.fecha }}</td><td>{{ r.doctor or '-' }}</td><td>{{ r.diagnostico or '-' }}</td><td>{{ r.tratamiento or '-' }}</td><td>{{ r.peso or '-' }}</td></tr>{% endfor %}
+</tbody></table>
+{% else %}<p style="color:#999">Sin registros m&eacute;dicos</p>{% endif %}
+<h2>Vacunas</h2>
+{% if vacunas %}
+<table><thead><tr><th>Fecha</th><th>Vacuna</th><th>Doctor</th></tr></thead><tbody>
+{% for v in vacunas %}<tr><td>{{ v.fecha }}</td><td>{{ v.nombre }}</td><td>{{ v.doctor or '-' }}</td></tr>{% endfor %}
+</tbody></table>
+{% else %}<p style="color:#999">Sin vacunas registradas</p>{% endif %}
+</body></html>

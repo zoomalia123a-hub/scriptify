@@ -1,0 +1,306 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<style>
+.loading-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center}
+.loading-overlay.active{display:flex}
+.loading-box{background:var(--white);border-radius:16px;padding:40px;text-align:center;max-width:360px}
+.loading-box .spinner{width:48px;height:48px;border:4px solid #ddd;border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.row-existe{background:#fff3cd!important}
+.row-existe td{color:#856404!important}
+.row-nuevo td{color:var(--success)!important}
+.markup-tool{display:flex;gap:8px;align-items:center;margin-bottom:12px;padding:10px 14px;background:var(--bg);border-radius:8px;font-size:13px;flex-wrap:wrap}
+.markup-tool input{width:70px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;text-align:center}
+.markup-tool .btn{padding:6px 14px;font-size:12px}
+</style>
+<div class="card">
+  <h2><i class="fas fa-file-upload"></i> Carga Rápida desde PDF</h2>
+    <p style="font-size:13px;color:var(--text-light);margin-bottom:16px">
+      Sube el PDF o imagen (foto) de tu proveedor. El sistema extraerá automáticamente los productos, imágenes y cantidades.
+    </p>
+  {% if msg %}
+  <div class="alert alert-success"><i class="fas fa-check-circle"></i> {{ msg }}</div>
+  {% endif %}
+  {% if error %}
+  <div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> {{ error }}</div>
+  {% if debug_texto %}
+  <details style="margin:8px 0;font-size:12px;color:var(--text-light)">
+    <summary style="cursor:pointer"><i class="fas fa-bug"></i> Texto extraído (debug)</summary>
+    <pre style="font-size:11px;background:#f5f5f5;padding:12px;border-radius:8px;margin-top:8px;max-height:300px;overflow:auto;white-space:pre-wrap">{{ debug_texto }}</pre>
+  </details>
+  {% endif %}
+  {% endif %}
+  {% if not productos %}
+  <form method="POST" enctype="multipart/form-data">
+    <div class="form-group">
+      <label>Seleccionar PDF o Imagen</label>
+      <input type="file" name="pdf" accept=".pdf,.png,.jpg,.jpeg,.webp" required style="padding:8px;border:1px solid #ddd;border-radius:8px;width:100%">
+    </div>
+    <div class="form-group">
+      <label>Comprobante de compra (opcional)</label>
+      <input type="file" name="comprobante" accept="image/*" style="padding:8px;border:1px solid #ddd;border-radius:8px;width:100%">
+      <span style="font-size:11px;color:var(--text-light)">Sube una foto de la boleta o factura para registrarla como egreso en Caja</span>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Categoría por defecto</label>
+        <select name="categoria" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+          {% for c in categorias %}
+          <option value="{{ c }}" {% if c=='General' %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Descuento Mayorista (%)</label>
+        <input type="number" name="descuento_mayorista" step="0.01" min="0" max="100" value="0" placeholder="Ej: 15">
+      </div>
+      </div>
+    <button type="submit" class="btn btn-primary"><i class="fas fa-file-import"></i> Procesar PDF</button>
+  </form>
+  {% else %}
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <h3>Importando productos...</h3>
+      <p style="font-size:13px;color:var(--text-light);margin-top:8px">Esto puede tomar unos segundos, por favor espera.</p>
+    </div>
+  </div>
+  <form method="POST" id="form-confirmar">
+    <input type="hidden" name="confirmar" value="1">
+    <input type="hidden" name="token" value="{{ token }}">
+    <input type="hidden" name="categoria" value="{{ request.form.get('categoria','General') }}">
+    <input type="hidden" name="descuento_mayorista" value="{{ descuento_mayorista|default('0') }}">
+    <input type="hidden" name="datos_json" value="{{ datos_json|e }}">
+    <input type="hidden" name="comprobante_file" value="{{ comprobante_file or '' }}">
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+      {% if comprobante_file %}
+      <div style="font-size:13px;color:var(--text-light)">
+        <i class="fas fa-file-image"></i> Comprobante: <a href="/comprobantes/{{ comprobante_file }}" target="_blank"><img src="/comprobantes/{{ comprobante_file }}" style="height:40px;border-radius:6px;border:1px solid #ddd;vertical-align:middle"></a>
+      </div>
+      {% endif %}
+      <div class="form-group" style="margin:0;min-width:150px">
+        <label style="font-size:11px">Proveedor</label>
+        <select name="id_proveedor" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+          <option value="">Sin proveedor</option>
+          {% for prov in proveedores %}
+          <option value="{{ prov.id }}">{{ prov.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="margin:0;min-width:130px">
+        <label style="font-size:11px">Método de pago</label>
+        <select name="metodo_pago_carga" style="padding:6px;border:1px solid #ddd;border-radius:6px;font-size:13px">
+          <option value="efectivo">Efectivo</option>
+          <option value="tarjeta">Tarjeta</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="yape">Yape</option>
+          <option value="plin">Plin</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap">
+      <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> Confirmar Importación</button>
+      <a href="/compras/carga-rapida" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
+    </div>
+    <div class="alert alert-info">
+      <i class="fas fa-info-circle"></i> Se importarán <strong>{{ productos|length }}</strong> producto(s). Puedes editar las cantidades y seleccionar qué imágenes corresponden a productos.
+      {% if descuento_mayorista and descuento_mayorista|float > 0 %}
+      <br><i class="fas fa-tags"></i> Descuento Mayorista: <strong>{{ descuento_mayorista }}%</strong>
+      {% endif %}
+    </div>
+    {% if debug_imagenes %}
+    <div class="card" style="margin-bottom:16px">
+      <h2><i class="fas fa-images"></i> Seleccionar imágenes de productos</h2>
+      <p style="font-size:12px;color:var(--text-light);margin-bottom:8px">
+        Arrastra las imágenes para reordenarlas. Las primeras {{ productos|length }} imágenes marcadas se asignarán en orden a los productos.
+      </p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px" id="img-selector">
+      {% for img_data in debug_imagenes %}
+        <label draggable="true" style="border:2px solid var(--primary);border-radius:8px;padding:4px;text-align:center;font-size:10px;cursor:grab;width:90px;position:relative;user-select:none" class="img-option" data-idx="{{ loop.index0 }}">
+          <input type="checkbox" name="img_check" value="{{ loop.index0 }}" checked style="position:absolute;top:4px;right:4px;width:16px;height:16px;accent-color:var(--primary);z-index:2">
+          <i class="fas fa-grip-vertical" style="position:absolute;top:4px;left:4px;font-size:10px;color:var(--text-light);opacity:.6"></i>
+          <img src="/productos_photos/_tmp_{{ token }}_{{ loop.index0 }}.png" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto">
+          <span style="display:block;margin-top:2px;color:var(--text-light)">{{ img_data.width }}×{{ img_data.height }}</span>
+        </label>
+      {% endfor %}
+      </div>
+      <div style="font-size:12px;color:var(--text-light);margin-top:8px">
+        <span id="img-count">0</span> imágenes seleccionadas para <strong>{{ productos|length }}</strong> producto(s)
+      </div>
+    </div>
+    {% endif %}
+    <div class="markup-tool">
+      <span><i class="fas fa-percent"></i> Markup a todos:</span>
+      <input type="number" id="bulkMarkup" value="" placeholder="%" min="0" step="0.1" style="width:60px">
+      <span style="font-size:12px;color:var(--text-light)">% sobre Precio Compra</span>
+      <button type="button" class="btn btn-sm btn-primary" onclick="aplicarMarkup()"><i class="fas fa-check"></i> Aplicar</button>
+      <button type="button" class="btn btn-sm btn-secondary" onclick="recargarPrecios()"><i class="fas fa-undo"></i> Restaurar</button>
+    </div>
+    <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr>
+          <th>Imagen</th>
+          <th>Código</th>
+          <th>Descripción</th>
+          <th>Stock Actual</th>
+          <th>Cantidad</th>
+          <th>Precio Compra</th>
+          <th>Precio Menor</th>
+          <th>Precio Mayor</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody id="productos-body">
+        {% set dsto = descuento_mayorista|default('0')|float %}
+        {% for p in productos %}
+        {% set p_mayor = p.precio_venta * (1 - dsto / 100) %}
+        {% set cls = 'row-existe' if p.get('existe') else 'row-nuevo' %}
+        <tr class="{{ cls }}">
+          <td class="img-preview"></td>
+          <td><code>{{ p.codigo }}</code></td>
+          <td>{{ p.descripcion }}</td>
+          <td style="text-align:center;font-weight:600">{{ p.get('stock_actual',0) }}</td>
+          <td><input type="number" name="cantidad_edit" value="{{ p.cantidad }}" min="0" step="1" style="width:65px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;text-align:center"></td>
+          <td><input type="number" name="precio_compra_edit" class="pc-edit" value="{{ "%.2f"|format(p.precio_compra) }}" min="0" step="0.01" style="width:85px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;text-align:center"></td>
+          <td><input type="number" name="precio_venta_edit" class="pv-edit" value="{{ "%.2f"|format(p.precio_venta) }}" min="0" step="0.01" style="width:85px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;text-align:center"></td>
+          <td>S/ {{ "%.2f"|format(p_mayor) }}</td>
+          <td>S/ {{ "%.2f"|format(p.total) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <details style="margin-top:16px;font-size:12px;color:var(--text-light)">
+      <summary style="cursor:pointer"><i class="fas fa-bug"></i> Texto extraído del PDF (debug)</summary>
+      <pre style="font-size:11px;background:#f5f5f5;padding:12px;border-radius:8px;margin-top:8px;max-height:300px;overflow:auto;white-space:pre-wrap">{{ texto_crudo }}</pre>
+    </details>
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+      <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> Confirmar Importación</button>
+      <a href="/compras/carga-rapida" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
+    </div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+// --- Loading overlay ---
+document.getElementById('form-confirmar') && document.getElementById('form-confirmar').addEventListener('submit', function(e){
+  document.getElementById('loadingOverlay').classList.add('active');
+});
+
+// --- Bulk markup ---
+var _preciosOriginales = [];
+(function(){
+  var inputs = document.querySelectorAll('.pv-edit');
+  inputs.forEach(function(inp){ _preciosOriginales.push(parseFloat(inp.value)||0); });
+})();
+function aplicarMarkup(){
+  var pct = parseFloat(document.getElementById('bulkMarkup').value);
+  if(isNaN(pct) || pct <= 0){ alert('Ingresa un porcentaje v\u00e1lido mayor a 0.'); return; }
+  var pcs = document.querySelectorAll('.pc-edit');
+  var pvs = document.querySelectorAll('.pv-edit');
+  pcs.forEach(function(pc, i){
+    var base = parseFloat(pc.value)||0;
+    if(base > 0 && i < pvs.length){
+      pvs[i].value = (base * (1 + pct/100)).toFixed(2);
+    }
+  });
+}
+function recargarPrecios(){
+  var pvs = document.querySelectorAll('.pv-edit');
+  pvs.forEach(function(inp, i){
+    if(i < _preciosOriginales.length) inp.value = _preciosOriginales[i].toFixed(2);
+  });
+}
+
+// --- Form validation ---
+document.getElementById('form-confirmar') && document.getElementById('form-confirmar').addEventListener('submit', function(e){
+  var errors = [];
+  var cants = document.querySelectorAll('input[name="cantidad_edit"]');
+  var pcs = document.querySelectorAll('input[name="precio_compra_edit"]');
+  var pvs = document.querySelectorAll('input[name="precio_venta_edit"]');
+  for(var i=0; i<cants.length; i++){
+    var cant = parseInt(cants[i].value)||0;
+    var pc = parseFloat(pcs[i].value)||0;
+    var pv = parseFloat(pvs[i].value)||0;
+    if(cant <= 0) errors.push('Fila '+(i+1)+': cantidad debe ser mayor a 0');
+    if(pc < 0) errors.push('Fila '+(i+1)+': precio compra no puede ser negativo');
+    if(pv < pc) errors.push('Fila '+(i+1)+': precio venta (S/ '+pv.toFixed(2)+') es menor que precio compra (S/ '+pc.toFixed(2)+')');
+  }
+  if(errors.length){
+    e.preventDefault();
+    alert('Corrige los siguientes errores antes de confirmar:\n\n' + errors.join('\n'));
+  }
+});
+
+// --- Image selector (drag & drop) ---
+(function(){
+  var token = "{{ token }}";
+  var selector = document.getElementById('img-selector');
+  if(!selector) return;
+  var countEl = document.getElementById('img-count');
+  var rows = document.querySelectorAll('#productos-body tr');
+  var draggedEl = null;
+
+  function updateAssignment(){
+    var checked = document.querySelectorAll('input[name="img_check"]:checked');
+    if(countEl) countEl.textContent = checked.length;
+    rows.forEach(function(row, idx){
+      var cell = row.querySelector('.img-preview');
+      if(!cell) return;
+      if(idx < checked.length){
+        var imgIdx = checked[idx].value;
+        cell.innerHTML = '<img src="/productos_photos/_tmp_' + token + '_' + imgIdx + '.png" style="width:50px;height:50px;object-fit:cover;border-radius:6px;background:#f0f0f0" onerror="this.style.display=\'none\'">';
+      } else {
+        cell.innerHTML = '<span style="color:#ccc;font-size:11px">\u2014</span>';
+      }
+    });
+  }
+
+  selector.addEventListener('dragstart', function(e){
+    var label = e.target.closest('.img-option');
+    if(!label) return;
+    draggedEl = label;
+    label.style.opacity = '.4';
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  selector.addEventListener('dragend', function(e){
+    var label = e.target.closest('.img-option');
+    if(!label) return;
+    label.style.opacity = '';
+    document.querySelectorAll('.img-option').forEach(function(el){ el.style.outline = ''; });
+  });
+  selector.addEventListener('dragover', function(e){
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    var label = e.target.closest('.img-option');
+    if(!label || label === draggedEl) return;
+    document.querySelectorAll('.img-option').forEach(function(el){ el.style.outline = ''; });
+    label.style.outline = '3px dashed #e74c3c';
+    label.style.outlineOffset = '-3px';
+  });
+  selector.addEventListener('drop', function(e){
+    e.preventDefault();
+    var target = e.target.closest('.img-option');
+    if(!target || !draggedEl || target === draggedEl) return;
+    target.style.outline = '';
+    var parent = selector;
+    if(draggedEl === target.nextElementSibling){
+      parent.insertBefore(draggedEl, target);
+    } else {
+      parent.insertBefore(draggedEl, target);
+      parent.insertBefore(target, draggedEl);
+    }
+    updateAssignment();
+  });
+
+  var checkboxes = document.querySelectorAll('input[name="img_check"]');
+  if(checkboxes.length){
+    updateAssignment();
+    checkboxes.forEach(function(cb){ cb.addEventListener('change', updateAssignment); });
+  }
+})();
+</script>
+{% endblock %}

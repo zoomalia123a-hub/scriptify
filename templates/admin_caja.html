@@ -1,0 +1,259 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div class="stats">
+  <div class="stat-card"><div class="icon" style="background:#27ae60"><i class="fas fa-arrow-up"></i></div><div class="info"><div class="num">S/ {{ "%.2f"|format(total_ingresos|float) }}</div><div class="label">Ingresos</div></div></div>
+  <div class="stat-card"><div class="icon" style="background:#e74c3c"><i class="fas fa-arrow-down"></i></div><div class="info"><div class="num">S/ {{ "%.2f"|format(total_egresos|float) }}</div><div class="label">Egresos</div></div></div>
+  <div class="stat-card"><div class="icon" style="background:#3498db"><i class="fas fa-balance-scale"></i></div><div class="info"><div class="num">S/ {{ "%.2f"|format(total_ingresos|float - total_egresos|float) }}</div><div class="label">Balance</div></div></div>
+</div>
+
+<div id="cajaChart" style="margin-bottom:16px;background:var(--white);border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);height:180px;display:none">
+  <canvas id="chartCanvas"></canvas>
+</div>
+
+<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+  <button class="btn btn-success" onclick="abrirModal('modalIngreso')"><i class="fas fa-plus"></i> Ingreso</button>
+  <button class="btn btn-danger" onclick="abrirModal('modalEgreso')"><i class="fas fa-minus"></i> Egreso</button>
+  <button class="btn btn-info" onclick="abrirModal('modalApertura')"><i class="fas fa-cash-register"></i> Aperturar</button>
+  <button class="btn btn-warning" onclick="abrirModal('modalCierre')"><i class="fas fa-lock"></i> Cerrar Día</button>
+  <a href="/caja/exportar{% if hoy_selected %}?fecha={{ hoy_selected }}{% endif %}" class="btn btn-success"><i class="fas fa-file-excel"></i> Exportar</a>
+</div>
+
+<div class="card" style="padding:16px;margin-bottom:16px">
+  <form method="GET" action="/caja" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+    <div class="form-group" style="margin:0;flex:1;min-width:140px"><label style="font-size:11px">Fecha</label><input type="date" name="fecha" value="{{ hoy_selected }}" style="padding:6px;border:1px solid #ddd;border-radius:6px;width:100%"></div>
+    <div class="form-group" style="margin:0;flex:1;min-width:140px"><label style="font-size:11px">Buscar</label><input type="text" name="q" value="{{ q or '' }}" placeholder="Concepto..." style="padding:6px;border:1px solid #ddd;border-radius:6px;width:100%"></div>
+    <div class="form-group" style="margin:0;min-width:120px"><label style="font-size:11px">Tipo</label>
+      <select name="tipo" style="padding:6px;border:1px solid #ddd;border-radius:6px">
+        <option value="">Todos</option>
+        <option value="ingreso" {% if tipo_f=='ingreso' %}selected{% endif %}>Ingreso</option>
+        <option value="egreso" {% if tipo_f=='egreso' %}selected{% endif %}>Egreso</option>
+        <option value="apertura" {% if tipo_f=='apertura' %}selected{% endif %}>Apertura</option>
+        <option value="cierre" {% if tipo_f=='cierre' %}selected{% endif %}>Cierre</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-sm btn-primary" style="margin-top:16px;height:34px">Filtrar</button>
+    {% if hoy_selected or q or tipo_f %}<a href="/caja" class="btn btn-sm btn-secondary" style="margin-top:16px;height:34px">Limpiar</a>{% endif %}
+  </form>
+</div>
+
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr><th>ID</th><th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Monto</th><th>Referencia</th><th>Comprobante</th><th>Acciones</th></tr></thead>
+  <tbody>{% for r in movimientos %}<tr>
+    <td>{{ r.id }}</td>
+    <td>{{ r.fecha }}</td>
+    <td><span class="badge {% if r.tipo=='ingreso' %}badge-success{% elif r.tipo=='egreso' %}badge-danger{% elif r.tipo=='apertura' %}badge-info{% elif r.tipo=='cierre' %}badge-warning{% endif %}">{{ r.tipo }}</span></td>
+    <td>{{ r.concepto or '-' }}</td>
+    <td>S/ {{ "%.2f"|format(r.monto|float) }}</td>
+    <td>{{ r.referencia_tipo or '-' }} #{{ r.referencia_id or '' }}</td>
+    <td>{% if r.comprobante %}<a href="/comprobantes/{{ r.comprobante }}" target="_blank" title="Ver comprobante"><img src="/comprobantes/{{ r.comprobante }}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid #ddd;cursor:pointer"></a>{% else %}-{% endif %}</td>
+    <td style="display:flex;gap:4px">
+      <button class="btn btn-sm btn-primary" onclick="editarMovimiento({{ r.id }},{{ r.tipo|tojson }},{{ r.concepto|tojson }},{{ r.monto }},{{ r.comprobante|tojson }},{{ r.metodo_pago|tojson }},{{ r.observacion|tojson }})"><i class="fas fa-edit"></i></button>
+      {% if rol=='admin' %}
+      <form method="POST" action="/caja/{{ r.id }}/eliminar" onsubmit="return confirmDelete()" style="display:inline">
+        <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+      </form>
+      {% endif %}
+    </td>
+  </tr>{% else %}<tr><td colspan="8"><div class="empty">Sin movimientos</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}<a href="/caja?page={{ page-1 }}{% if hoy_selected %}&fecha={{ hoy_selected }}{% endif %}{% if q %}&q={{ q }}{% endif %}{% if tipo_f %}&tipo={{ tipo_f }}{% endif %}">&laquo;</a>{% endif %}
+  {% for p in range(1, total_pages + 1) %}
+    {% if p >= page-2 and p <= page+2 %}
+    <a href="/caja?page={{ p }}{% if hoy_selected %}&fecha={{ hoy_selected }}{% endif %}{% if q %}&q={{ q }}{% endif %}{% if tipo_f %}&tipo={{ tipo_f }}{% endif %}" class="{% if p==page %}active{% endif %}">{{ p }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if page < total_pages %}<a href="/caja?page={{ page+1 }}{% if hoy_selected %}&fecha={{ hoy_selected }}{% endif %}{% if q %}&q={{ q }}{% endif %}{% if tipo_f %}&tipo={{ tipo_f }}{% endif %}">&raquo;</a>{% endif %}
+</div>
+{% endif %}
+
+<div class="modal-overlay" id="modalIngreso" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>Registrar Ingreso</h2>
+    <form method="POST" action="/caja/nuevo" enctype="multipart/form-data">
+      <input type="hidden" name="tipo" value="ingreso">
+      <div class="form-group"><label>Concepto</label><input type="text" name="concepto" required></div>
+      <div class="form-group"><label>Monto (S/)</label><input type="number" step="0.01" name="monto" required></div>
+      <div class="form-group"><label>Método de Pago</label>
+        <select name="metodo_pago">
+          <option value="efectivo">Efectivo</option>
+          <option value="tarjeta">Tarjeta</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="yape">Yape</option>
+          <option value="plin">Plin</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Comprobante (foto)</label><input type="file" name="comprobante" accept="image/*" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+      <div class="form-group"><label>Observación</label><textarea name="observacion" rows="2" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px"></textarea></div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-success">Registrar</button><button type="button" class="btn btn-secondary" onclick="cerrarModal('modalIngreso')">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalEgreso" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>Registrar Egreso</h2>
+    <form method="POST" action="/caja/nuevo" enctype="multipart/form-data">
+      <input type="hidden" name="tipo" value="egreso">
+      <div class="form-group"><label>Concepto</label><input type="text" name="concepto" required></div>
+      <div class="form-group"><label>Monto (S/)</label><input type="number" step="0.01" name="monto" required></div>
+      <div class="form-group"><label>Método de Pago</label>
+        <select name="metodo_pago">
+          <option value="efectivo">Efectivo</option>
+          <option value="tarjeta">Tarjeta</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="yape">Yape</option>
+          <option value="plin">Plin</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Comprobante (foto)</label><input type="file" name="comprobante" accept="image/*" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px"></div>
+      <div class="form-group"><label>Observación</label><textarea name="observacion" rows="2" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px"></textarea></div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-danger">Registrar</button><button type="button" class="btn btn-secondary" onclick="cerrarModal('modalEgreso')">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalApertura" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>Aperturar Caja</h2>
+    <form method="POST" action="/caja/aperturar">
+      <div class="form-group"><label>Monto Inicial (S/)</label><input type="number" step="0.01" name="monto_inicial" value="0" required></div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-info">Aperturar</button><button type="button" class="btn btn-secondary" onclick="cerrarModal('modalApertura')">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCierre" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>Cerrar Caja del Día</h2>
+    <div id="resumenCierre" style="margin-bottom:16px;padding:12px;background:#f8f9fa;border-radius:8px">
+      <p style="margin:4px 0">💵 Apertura: <span id="resApertura">0.00</span></p>
+      <p style="margin:4px 0">📈 Ingresos: <span id="resIngresos" style="color:#27ae60">0.00</span></p>
+      <p style="margin:4px 0">📉 Egresos: <span id="resEgresos" style="color:#e74c3c">0.00</span></p>
+      <p style="margin:4px 0;font-weight:bold;border-top:1px solid #ddd;padding-top:4px">💰 Saldo Final: <span id="resSaldo">0.00</span></p>
+    </div>
+    <form method="POST" action="/caja/cerrar" id="formCierre">
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-warning"><i class="fas fa-lock"></i> Confirmar Cierre</button><button type="button" class="btn btn-secondary" onclick="cerrarModal('modalCierre')">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalEditar" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>Editar Movimiento</h2>
+    <form method="POST" action="" id="formEditar" enctype="multipart/form-data">
+      <div class="form-group"><label>Tipo</label>
+        <select name="tipo" id="editTipo">
+          <option value="ingreso">Ingreso</option>
+          <option value="egreso">Egreso</option>
+          <option value="apertura">Apertura</option>
+          <option value="cierre">Cierre</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Concepto</label><input type="text" name="concepto" id="editConcepto" required></div>
+      <div class="form-group"><label>Monto (S/)</label><input type="number" step="0.01" name="monto" id="editMonto" required></div>
+      <div class="form-group"><label>Método de Pago</label><select name="metodo_pago" id="editMetodoPago">
+        <option value="efectivo">Efectivo</option>
+        <option value="tarjeta">Tarjeta</option>
+        <option value="transferencia">Transferencia</option>
+        <option value="yape">Yape</option>
+        <option value="plin">Plin</option>
+      </select></div>
+      <div class="form-group"><label>Observación</label><textarea name="observacion" id="editObservacion" rows="2" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px"></textarea></div>
+      <div class="form-group"><label>Comprobante</label>
+        <div id="editComprobanteActual" style="margin-bottom:4px"></div>
+        <input type="file" name="comprobante" accept="image/*" style="width:100%;padding:6px;border:1px solid #ddd;border-radius:6px">
+      </div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-primary">Guardar</button><button type="button" class="btn btn-secondary" onclick="cerrarModal('modalEditar')">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function abrirModal(id){document.getElementById(id).classList.add('active')}
+function cerrarModal(id){document.getElementById(id).classList.remove('active')}
+function confirmDelete(){return confirm('¿Eliminar este movimiento?')}
+function editarMovimiento(id,tipo,concepto,monto,comprobante,metodoPago,observacion){
+  document.getElementById('formEditar').action='/caja/'+id+'/editar';
+  document.getElementById('editTipo').value=tipo;
+  document.getElementById('editConcepto').value=concepto;
+  document.getElementById('editMonto').value=monto;
+  document.getElementById('editMetodoPago').value=metodoPago||'efectivo';
+  document.getElementById('editObservacion').value=observacion||'';
+  var cdiv=document.getElementById('editComprobanteActual');
+  if(comprobante){
+    cdiv.innerHTML='<a href="/comprobantes/'+comprobante+'" target="_blank"><img src="/comprobantes/'+comprobante+'" style="height:48px;border-radius:6px;border:1px solid #ddd"></a> <span style="font-size:11px;color:#999">(sube uno nuevo para reemplazar)</span>';
+  }else{
+    cdiv.innerHTML='<span style="font-size:11px;color:#999">Sin comprobante</span>';
+  }
+  abrirModal('modalEditar');
+}
+
+document.getElementById('formCierre')?.addEventListener('submit', function(e){
+  if(!confirm('¿Estás seguro de cerrar la caja del día? Esta acción registrará el saldo final.')){
+    e.preventDefault();
+  }
+});
+
+document.querySelector('[onclick*="modalCierre"]')?.addEventListener('click', function(){
+  fetch('/api/caja/resumen').then(function(r){return r.json()}).then(function(d){
+    document.getElementById('resApertura').textContent='S/ '+parseFloat(d.apertura||0).toFixed(2);
+    document.getElementById('resIngresos').textContent='S/ '+parseFloat(d.ingresos||0).toFixed(2);
+    document.getElementById('resEgresos').textContent='S/ '+parseFloat(d.egresos||0).toFixed(2);
+    document.getElementById('resSaldo').textContent='S/ '+(parseFloat(d.apertura||0)+parseFloat(d.ingresos||0)-parseFloat(d.egresos||0)).toFixed(2);
+  }).catch(function(){});
+});
+
+// Weekly chart
+(function(){
+  var canvas = document.getElementById('chartCanvas');
+  if(!canvas)return;
+  var ctx = canvas.getContext('2d');
+  var parent = canvas.parentElement;
+  function resize(){canvas.width=parent.offsetWidth;canvas.height=parent.offsetHeight-32}
+  resize();
+  fetch('/api/caja/semanal').then(function(r){return r.json()}).then(function(d){
+    if(!d.dias || d.dias.length<2)return;
+    parent.style.display='block';
+    resize();
+    var dias = d.dias, W=canvas.width, H=canvas.height, P=40, gap=4;
+    var maxV = 1;
+    dias.forEach(function(x){maxV=Math.max(maxV,x.ingresos,x.egresos)});
+    var colW = (W-P*2)/dias.length;
+    ctx.clearRect(0,0,W,H);
+    // title
+    ctx.fillStyle='#2c3e50'; ctx.font='bold 13px sans-serif';
+    ctx.fillText('Últimos 7 días', P, 18);
+    // grid lines
+    ctx.strokeStyle='#eef2f7'; ctx.lineWidth=1;
+    for(var i=0;i<4;i++){var y=P+((H-P)/4)*i;ctx.beginPath();ctx.moveTo(P,y);ctx.lineTo(W-P,y);ctx.stroke()}
+    // bars
+    dias.forEach(function(day,i){
+      var x=P+i*colW+gap;
+      var ih=(day.ingresos/maxV)*(H-P-10);
+      var eh=(day.egresos/maxV)*(H-P-10);
+      // ingresos bar
+      if(ih>0){ctx.fillStyle='#27ae60';ctx.fillRect(x,H-10-ih,colW/2-gap,ih)}
+      // egresos bar
+      if(eh>0){ctx.fillStyle='#e74c3c';ctx.fillRect(x+colW/2,H-10-eh,colW/2-gap,eh)}
+      // date label
+      ctx.fillStyle='#95a5a6'; ctx.font='9px sans-serif'; ctx.textAlign='center';
+      var parts=day.fecha.split('-');
+      ctx.fillText(parts[2]+'/'+parts[1], x+colW/2, H-2);
+    });
+    // legend
+    ctx.fillStyle='#27ae60'; ctx.fillRect(W-130,6,10,10);
+    ctx.fillStyle='#2c3e50'; ctx.font='10px sans-serif'; ctx.textAlign='left';
+    ctx.fillText('Ingresos',W-115,15);
+    ctx.fillStyle='#e74c3c'; ctx.fillRect(W-65,6,10,10);
+    ctx.fillStyle='#2c3e50'; ctx.fillText('Egresos',W-50,15);
+  }).catch(function(){});
+})();
+</script>
+{% endblock %}

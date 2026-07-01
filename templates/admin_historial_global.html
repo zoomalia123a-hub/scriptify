@@ -1,0 +1,162 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<style>
+@media(max-width:600px){.hg-search{flex-direction:column}table td,table th{padding:6px 4px;font-size:12px}.hg-col-pc,.hg-col-peso{display:none}}
+@keyframes highlightFade{0%{background:#d4edda}100%{background:transparent}}
+tr.highlight{animation:highlightFade 3s ease-out forwards}
+.pag{display:flex;justify-content:center;align-items:center;gap:6px;padding:12px;flex-wrap:wrap}
+.pag a,.pag span{display:inline-block;padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none}
+.pag a{background:var(--bg);color:var(--text)}
+.pag a:hover{background:var(--primary);color:#fff}
+.pag .act{background:var(--primary);color:#fff;font-weight:600}
+.text-trunc{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}
+.badge-pc{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+.badge-pc.ok{background:#d4edda;color:#155724}
+.badge-pc.warn{background:#fef9e7;color:#856404}
+.badge-pc.danger{background:#f8d7da;color:#721c24}
+</style>
+<form method="GET" action="/historial" class="hg-search" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;padding:12px;background:var(--bg);border-radius:8px">
+  <input type="text" name="q" placeholder="Buscar paciente, due&ntilde;o, diagn&oacute;stico, doctor..." value="{{ q or '' }}" style="flex:1;min-width:200px;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px" autocomplete="off">
+  <button type="submit" class="btn btn-primary" style="padding:10px 20px"><i class="fas fa-search"></i> Buscar</button>
+  <a href="/historial" class="btn btn-secondary" style="padding:10px 20px;text-decoration:none"><i class="fas fa-times"></i> Limpiar</a>
+</form>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+  <span style="color:var(--text-light);font-size:13px">{{ total }} registro(s) cl&iacute;nico(s) &middot; P&aacute;gina {{ page }} de {{ total_pages }}</span>
+  <button class="btn btn-primary" onclick="abrirModalNuevoPaciente()"><i class="fas fa-plus"></i> Nuevo Paciente</button>
+</div>
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr><th>Fecha</th><th>Paciente</th><th>Due&ntilde;o</th><th class="hg-col-peso">Peso</th><th>Doctor</th><th>Diagn&oacute;stico</th><th>Tratamiento</th><th class="hg-col-pc">Pr&oacute;x. Control</th><th>Acciones</th></tr></thead>
+  <tbody>{% for r in registros %}<tr data-animal-id="{{ r.id_animal }}" data-dueno-id="{{ r.id_dueno }}">
+    <td style="white-space:nowrap">{{ r.fecha }}{% if r.hora %} <span style="color:var(--text-light);font-size:11px">{{ r.hora }}</span>{% endif %}</td>
+    <td><span style="font-weight:600">{{ r.animal_nombre }}</span><br><span style="font-size:11px;color:var(--text-light)">{{ r.especie or '' }}</span></td>
+    <td>{{ r.dueno_nombre or '-' }}</td>
+    <td class="hg-col-peso" style="white-space:nowrap">{% if r.peso is not none %}{{ r.peso }} kg{% else %}-{% endif %}</td>
+    <td>{{ r.doctor or '-' }}</td>
+    <td>{% if r.diagnostico %}<span class="text-trunc" title="{{ r.diagnostico }}">{{ r.diagnostico[:80] }}{% if r.diagnostico|length>80 %}...{% endif %}</span>{% else %}-{% endif %}</td>
+    <td>{% if r.tratamiento %}<span class="text-trunc" title="{{ r.tratamiento }}">{{ r.tratamiento[:80] }}{% if r.tratamiento|length>80 %}...{% endif %}</span>{% else %}-{% endif %}</td>
+    <td class="hg-col-pc">{% if r.proximo_control %}<span class="badge-pc {% if r.proximo_control < hoy %}danger{% elif r.proximo_control <= hoy %}warn{% else %}ok{% endif %}">{{ r.proximo_control }}</span>{% else %}-{% endif %}</td>
+    <td style="white-space:nowrap">
+      <a href="/animales/{{ r.id_animal }}/historial" class="btn btn-sm btn-info" title="Historial completo"><i class="fas fa-notes-medical"></i></a>
+      <a href="/animales/{{ r.id_animal }}/editar" class="btn btn-sm btn-primary" title="Editar mascota"><i class="fas fa-paw"></i></a>
+      <a href="/duenos/{{ r.id_dueno }}" class="btn btn-sm btn-secondary" title="Ver due&ntilde;o"><i class="fas fa-user"></i></a>
+    </td>
+  </tr>{% else %}<tr><td colspan="9"><div class="empty"><i class="fas fa-notes-medical" style="font-size:32px;display:block;margin-bottom:8px"></i>No hay registros cl&iacute;nicos</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+{% if total_pages>1 %}
+<div class="pag">
+  {% if page>1 %}<a href="/historial?page={{ page-1 }}{% if q %}&q={{ q }}{% endif %}">&laquo; Anterior</a>{% else %}<span style="color:#ccc">&laquo; Anterior</span>{% endif %}
+  {% for p in range(1,total_pages+1) %}
+    {% if p>=page-2 and p<=page+2 %}
+      <a href="/historial?page={{ p }}{% if q %}&q={{ q }}{% endif %}" {% if p==page %}class="act"{% endif %}>{{ p }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if page<total_pages %}<a href="/historial?page={{ page+1 }}{% if q %}&q={{ q }}{% endif %}">Siguiente &raquo;</a>{% else %}<span style="color:#ccc">Siguiente &raquo;</span>{% endif %}
+</div>
+{% endif %}
+<div class="modal-overlay" id="modalNuevoPaciente"><div class="modal-box">
+  <h3><i class="fas fa-paw" style="color:var(--primary)"></i> Nuevo Paciente</h3>
+  <div class="form-group"><label>Nombre del paciente</label><input id="npNombre" style="width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px"></div>
+  <div class="form-row">
+    <div class="form-group"><label>Especie</label><select id="npEspecie" onchange="cargarRazasGlobal()" style="width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px"><option>Perro</option><option>Gato</option><option>Ave</option><option>Roedor</option><option>Conejo</option><option>Otro</option></select><input id="npEspecie_custom" name="especie" placeholder="Especificar especie..." style="display:none;width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px"></div>
+    <div class="form-group">
+      <label>Raza <span id="npRazaLabelGlobal" style="color:var(--text-light);font-weight:400;font-size:11px">(selecciona la especie)</span></label>
+      <div id="npRazaContainerGlobal"></div>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Sexo</label><select id="npSexo" style="width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px"><option value="">--</option><option>Macho</option><option>Hembra</option></select></div>
+    <div class="form-group"><label>Esterilizado <span style="color:#dc3545">*</span> <span style="font-size:11px;color:var(--text-light);font-weight:400">(requiere seleccionar S&iacute; o No)</span></label><select id="npEsterilizado" style="width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px" required><option value="">Esterilizado</option><option value="1">S&iacute;</option><option value="0">No</option></select></div>
+  </div>
+  <div style="padding:12px;background:var(--bg);border-radius:8px;margin:8px 0">
+    <strong style="font-size:13px;color:var(--primary)"><i class="fas fa-user"></i> Due&ntilde;o</strong>
+    <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
+      <div style="flex:1">
+        <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:2px">DNI / RUC</label>
+        <div style="display:flex;gap:4px">
+          <input id="npDuenoDni" placeholder="DNI (8) o RUC (11)" style="flex:1;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px" maxlength="11" oninput="buscarDuenoDniGlobal()">
+          <span id="dniStatusGlobal" style="display:none;width:32px;height:32px;border-radius:50%;align-items:center;justify-content:center;font-size:14px"></span>
+        </div>
+      </div>
+      <div style="flex:2">
+        <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:2px">Nombre / Raz&oacute;n Social</label>
+        <input id="npDuenoNombre" placeholder="Nombre completo" style="width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <input id="npDuenoTel" placeholder="Tel&eacute;fono" style="flex:1;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px">
+      <input id="npDuenoDir" placeholder="Direcci&oacute;n" style="flex:2;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px">
+    </div>
+  </div>
+  <div class="form-group" style="margin-top:8px">
+    <label>Foto de la mascota</label>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input id="npFoto" type="file" accept="image/*" style="flex:1;padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px">
+      <img id="npFotoPreview" style="width:48px;height:48px;border-radius:8px;object-fit:cover;display:none;border:2px solid #e0e0e0">
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button class="btn btn-success" style="flex:1;padding:12px" onclick="crearPacienteGlobal()"><i class="fas fa-save"></i> Guardar</button>
+    <button class="btn btn-secondary" style="flex:1;padding:12px" onclick="document.getElementById('modalNuevoPaciente').classList.remove('active')">Cancelar</button>
+  </div>
+</div></div>
+<script src="/static/razas.js"></script>
+<script>
+initOtro('npEspecie','npEspecie_custom');
+function getEspecieGlobal(){
+  var sel=document.getElementById('npEspecie'), inp=document.getElementById('npEspecie_custom');
+  return inp.style.display==='block' ? inp.value : sel.value;
+}
+document.getElementById('npFoto')&&document.getElementById('npFoto').addEventListener('change',function(){
+  var prev=document.getElementById('npFotoPreview');
+  if(this.files&&this.files[0]){var reader=new FileReader();reader.onload=function(e){prev.src=e.target.result;prev.style.display='block'};reader.readAsDataURL(this.files[0])}
+  else{prev.style.display='none'}
+});
+function cargarRazasGlobal(){cargarRazas('npEspecie','npRazaContainerGlobal','npRazaLabelGlobal','npRaza','razasDatalistGlobal')}
+function getRazaGlobal(){var el=document.getElementById('npRaza');return el?el.value.trim():''}
+var dniTimeoutGlobal;
+function buscarDuenoDniGlobal(){
+  clearTimeout(dniTimeoutGlobal);
+  var self=this;
+  dniTimeoutGlobal=setTimeout(function(){dnibuscar('npDuenoDni','dniStatusGlobal','npDuenoNombre','npDuenoDir','npDuenoTel')},400);
+}
+function abrirModalNuevoPaciente(){document.getElementById('modalNuevoPaciente').classList.add('active')}
+function crearPacienteGlobal(){
+  var nom=document.getElementById('npNombre').value.trim();
+  if(!nom){alert('Ingresa el nombre del paciente');return}
+  var est=document.getElementById('npEsterilizado').value;
+  if(est===''){alert('Selecciona si est\u00e1 esterilizado o no');return}
+  var fd=new FormData();
+  fd.append('nombre',nom);
+  fd.append('especie',getEspecieGlobal());
+  fd.append('raza',getRazaGlobal());
+  fd.append('sexo',document.getElementById('npSexo').value);
+  fd.append('esterilizado',est);
+  fd.append('dni',document.getElementById('npDuenoDni').value);
+  fd.append('dueno_nombre',document.getElementById('npDuenoNombre').value);
+  fd.append('telefono',document.getElementById('npDuenoTel').value);
+  fd.append('direccion',document.getElementById('npDuenoDir').value);
+  var foto=document.getElementById('npFoto');
+  if(foto&&foto.files&&foto.files[0])fd.append('foto',foto.files[0]);
+  fetch('/api/pacientes/crear',{method:'POST',body:fd}).then(function(r){return r.json()}).then(function(d){
+    if(d.error){alert(d.error);return}
+    window.location.href='/animales/'+d.id+'/historial';
+  }).catch(function(e){alert('Error: '+e.message)});
+}
+document.querySelectorAll('.modal-overlay').forEach(function(el){
+  el.addEventListener('click',function(e){if(e.target===this)this.classList.remove('active')});
+});
+cargarRazasGlobal();
+(function(){
+  var editedAnimal = {{ edited_animal or 'null' }};
+  var editedDueno = {{ edited_dueno or 'null' }};
+  if(editedAnimal!==null){
+    document.querySelectorAll('tr[data-animal-id="'+editedAnimal+'"]').forEach(function(tr){tr.classList.add('highlight')});
+  }
+  if(editedDueno!==null){
+    document.querySelectorAll('tr[data-dueno-id="'+editedDueno+'"]').forEach(function(tr){tr.classList.add('highlight')});
+  }
+})();
+</script>
+{% endblock %}

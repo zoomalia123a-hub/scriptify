@@ -1,0 +1,34 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+  <div><span style="color:var(--text-light);font-size:13px">{{ ordenes|length }} orden(es)</span></div>
+  <div style="display:flex;gap:8px">
+    <a href="/ordenes-compra?estado=pendiente{% if q %}&amp;q={{ q }}{% endif %}" class="btn btn-sm btn-secondary" style="text-decoration:none">Pendientes</a>
+    <a href="/ordenes-compra?estado=recibida{% if q %}&amp;q={{ q }}{% endif %}" class="btn btn-sm btn-success" style="text-decoration:none">Recibidas</a>
+    <a href="/ordenes-compra{% if q %}?q={{ q }}{% endif %}" class="btn btn-sm btn-info" style="text-decoration:none">Todas</a>
+    <a href="/ordenes-compra/nuevo" class="btn btn-primary"><i class="fas fa-plus"></i> Nueva Orden</a>
+    <a href="/ordenes-compra/exportar?estado={{ estado }}{% if q %}&amp;q={{ q }}{% endif %}" class="btn btn-info"><i class="fas fa-file-excel"></i></a>
+  </div>
+</div>
+
+<form method="GET" style="display:flex;gap:8px;margin-bottom:12px;padding:12px;background:var(--bg);border-radius:8px">
+  <input type="hidden" name="estado" value="{{ estado }}">
+  <input type="text" name="q" placeholder="Buscar por proveedor..." value="{{ q or '' }}" style="flex:1;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px" autocomplete="off">
+  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i></button>
+  {% if q %}<a href="/ordenes-compra?estado={{ estado }}" class="btn btn-secondary btn-sm"><i class="fas fa-times"></i></a>{% endif %}
+</form>
+
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr><th># OC</th><th>Proveedor</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead>
+  <tbody>{% for o in ordenes %}<tr>
+    <td style="font-weight:600"><a href="/ordenes-compra/{{ o.id }}" style="color:var(--primary);text-decoration:none">#{{ o.id }}</a></td>
+    <td>{{ o.proveedor_nombre }}</td>
+    <td>{{ o.fecha }}</td>
+    <td style="font-weight:700">S/ {{ "%.2f"|format(o.total|float) }}</td>
+    <td><span class="badge {% if o.estado=='pendiente' %}badge-warning{% elif o.estado=='recibida' %}badge-success{% else %}badge-danger{% endif %}">{{ o.estado|capitalize }}</span></td>
+    <td><a href="/ordenes-compra/{{ o.id }}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a></td>
+  </tr>{% else %}<tr><td colspan="6"><div class="empty">No hay &oacute;rdenes de compra</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+{% endblock %}

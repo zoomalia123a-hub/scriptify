@@ -1,0 +1,93 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<style>
+.plan-card{border:2px solid #eee;border-radius:16px;padding:30px;text-align:center;max-width:450px;margin:0 auto}
+.plan-card.activo{border-color:var(--success);background:#f0faf5}
+.plan-card.vencido{border-color:var(--danger);background:#fef0ef}
+.plan-precio{font-size:48px;font-weight:700;color:var(--primary);margin:16px 0}
+.plan-precio small{font-size:18px;color:var(--text-light)}
+.plan-estado{display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600}
+.plan-estado.activo{background:#d5f5e3;color:#27ae60}
+.plan-estado.inactivo{background:#fef9e7;color:#f39c12}
+.plan-estado.vencido{background:#fdedec;color:#e74c3c}
+.pago-item{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee}
+.pago-item:last-child{border:none}
+.pago-fecha{color:var(--text-light);font-size:12px}
+.pago-monto{font-weight:600}
+.pago-metodo{font-size:12px;color:var(--text-light)}
+@media(max-width:768px){.plan-precio{font-size:36px}}
+</style>
+
+<div class="card" style="max-width:800px;margin:0 auto">
+  <div class="plan-card {% if plan.estado=='activo' %}activo{% elif plan.estado=='vencido' %}vencido{% endif %}">
+    <h2><i class="fas fa-credit-card"></i> {{ plan.plan|capitalize }}</h2>
+    <div class="plan-precio">S/ {{ '%.0f'|format(plan.precio) }} <small>/mes</small></div>
+    <div style="margin:12px 0">
+      <span class="plan-estado {{ plan.estado }}">
+        {% if plan.estado=='activo' %}
+          <i class="fas fa-check-circle"></i> Activo
+        {% elif plan.estado=='vencido' %}
+          <i class="fas fa-times-circle"></i> Vencido
+        {% else %}
+          <i class="fas fa-pause-circle"></i> Inactivo
+        {% endif %}
+      </span>
+    </div>
+    {% if plan.fecha_vencimiento and plan.estado=='activo' %}
+      {% set dias = (plan.fecha_vencimiento|string|replace('-','')|int - hoy|string|replace('-','')|int) %}
+      <p style="color:var(--text-light);font-size:13px">
+        Vence: <strong>{{ plan.fecha_vencimiento }}</strong>
+        {% if dias <= 7 and dias >= 0 %}
+          <span style="color:var(--warning)">({{ dias }} d&iacute;as)</span>
+        {% elif dias < 0 %}
+          <span style="color:var(--danger)">(Vencido)</span>
+        {% else %}
+          <span style="color:var(--text-light)">({{ dias }} d&iacute;as)</span>
+        {% endif %}
+      </p>
+    {% endif %}
+    {% if plan.fecha_inicio %}
+      <p style="font-size:12px;color:var(--text-light)">Activo desde {{ plan.fecha_inicio }}</p>
+    {% endif %}
+    <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+      <form method="POST" action="/suscripcion/activar" style="display:inline" onsubmit="return confirm('Activar suscripci\u00f3n por 30 d\u00edas?')">
+        <button class="btn btn-success"><i class="fas fa-check"></i> Marcar Pagado (+30 d&iacute;as)</button>
+      </form>
+      {% if plan.estado=='activo' %}
+      <form method="POST" action="/suscripcion/desactivar" style="display:inline" onsubmit="return confirm('Desactivar suscripci\u00f3n?')">
+        <button class="btn btn-secondary"><i class="fas fa-pause"></i> Desactivar</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div style="margin-top:20px;padding:16px;background:#f8f9fa;border-radius:12px">
+    <h3 style="font-size:14px;margin-bottom:12px"><i class="fas fa-cog"></i> Configurar precio</h3>
+    <form method="POST" action="/suscripcion/configurar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:13px;color:var(--text-light)">S/</label>
+      <input type="number" name="precio" value="{{ plan.precio }}" step="0.5" min="1" style="width:100px;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+      <button class="btn btn-sm btn-primary">Actualizar</button>
+    </form>
+  </div>
+
+  <h3 style="margin-top:24px;font-size:16px"><i class="fas fa-history"></i> Historial de pagos</h3>
+  <div style="margin-top:12px">
+    {% if pagos %}
+      {% for p in pagos %}
+      <div class="pago-item">
+        <div>
+          <div class="pago-monto">S/ {{ '%.2f'|format(p.monto) }}</div>
+          <div class="pago-metodo"><i class="fas fa-{% if p.metodo=='manual' %}hand-holding-usd{% else %}credit-card{% endif %}"></i> {{ p.metodo|capitalize }}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="pago-fecha">{{ p.fecha_pago }}</div>
+          {% if p.registrado_por %}<div style="font-size:11px;color:var(--text-light)">{{ p.registrado_por }}</div>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p style="text-align:center;color:var(--text-light);padding:20px">Sin pagos registrados</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

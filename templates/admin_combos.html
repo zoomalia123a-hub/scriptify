@@ -1,0 +1,45 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+  <div><span style="color:var(--text-light);font-size:13px">{{ combos|length }} combo(s)</span></div>
+  <div style="display:flex;gap:8px">
+    <a href="/combos/nuevo" class="btn btn-primary"><i class="fas fa-plus"></i> Nuevo Combo</a>
+    <a href="/combos/exportar" class="btn btn-info"><i class="fas fa-file-excel"></i></a>
+  </div>
+</div>
+
+<form method="GET" style="display:flex;gap:8px;margin-bottom:12px;padding:12px;background:var(--bg);border-radius:8px">
+  <input type="text" id="searchCombo" placeholder="Buscar por nombre o descripción..." style="flex:1;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px" autocomplete="off">
+  <button type="button" class="btn btn-primary btn-sm" onclick="filtrarCombos()"><i class="fas fa-search"></i></button>
+  <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('searchCombo').value='';filtrarCombos()"><i class="fas fa-times"></i></button>
+</form>
+
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr><th>ID</th><th>Nombre</th><th>Descripci&oacute;n</th><th>Items</th><th>Precio Total</th><th>Acciones</th></tr></thead>
+  <tbody id="comboTableBody">{% for c in combos %}<tr data-search="{{ c.nombre|lower }} {{ (c.descripcion or '')|lower }}">
+    <td>{{ c.id }}</td>
+    <td style="font-weight:600">{{ c.nombre }}</td>
+    <td>{{ c.descripcion or '-' }}</td>
+    <td><span class="badge badge-info">{{ c.combo_items|length }} item(s)</span>
+      <div style="font-size:11px;color:var(--text-light);margin-top:4px">{% for it in c.combo_items %}{{ it.nombre }} x{{ it.cantidad }}{% if not loop.last %}, {% endif %}{% endfor %}</div>
+    </td>
+    <td style="font-weight:700;color:var(--primary)">S/ {{ "%.2f"|format(c.precio_total|float) }}</td>
+    <td style="white-space:nowrap">
+      <a href="/combos/{{ c.id }}/editar" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i></a>
+      <a href="/combos/{{ c.id }}/eliminar" class="btn btn-sm btn-danger" onclick="return confirmDelete('Eliminar combo {{ c.nombre|e }}?')"><i class="fas fa-trash"></i></a>
+    </td>
+  </tr>{% else %}<tr><td colspan="6"><div class="empty"><i class="fas fa-boxes" style="font-size:32px;display:block;margin-bottom:8px"></i>No hay combos</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+
+<script>
+function filtrarCombos(){
+  var q=document.getElementById('searchCombo').value.toLowerCase().trim();
+  document.querySelectorAll('#comboTableBody tr').forEach(function(tr){
+    tr.style.display=(!q||tr.getAttribute('data-search').includes(q))?'':'none';
+  });
+}
+document.getElementById('searchCombo').addEventListener('input',filtrarCombos);
+</script>
+{% endblock %}

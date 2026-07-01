@@ -1,0 +1,215 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<style>
+.rango-form{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:16px;padding:16px;background:var(--bg);border-radius:12px}
+.rango-form .fg{display:flex;flex-direction:column;gap:4px}
+.rango-form .fg label{font-size:11px;color:var(--text-light);font-weight:600;text-transform:uppercase}
+.rango-form .fg input,.rango-form .fg select{padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px}
+.rango-form .quick{display:flex;gap:6px;align-items:center;margin-left:auto}
+.rango-form .quick .btn{font-size:11px;padding:5px 10px}
+.comp-variacion{font-size:13px;margin-top:2px}
+.comp-variacion.pos{color:var(--success)}
+.comp-variacion.neg{color:var(--danger)}
+.chart-wrap{position:relative;height:220px;width:100%}
+.tbl-toggle{cursor:pointer;color:var(--primary);font-size:11px}
+.items-detail{display:none;background:#f8f9fa}
+.items-detail.open{display:table-row-group}
+.items-detail td{padding:6px 12px!important;font-size:12px;border-bottom:1px solid #eee}
+body.dark .items-detail td{background:#353b48}
+@media print{.rango-form,.btn,.no-print{display:none!important}.card{break-inside:avoid}}
+</style>
+
+<form method="GET" action="/reportes/rango" class="rango-form">
+  <div class="fg">
+    <label>Desde</label>
+    <input type="date" name="desde" value="{{ request.args.get('desde', hoy) }}">
+  </div>
+  <div class="fg">
+    <label>Hasta</label>
+    <input type="date" name="hasta" value="{{ request.args.get('hasta', hoy) }}">
+  </div>
+  <div class="fg">
+    <label>Doctor</label>
+    <select name="doctor">
+      <option value="">Todos</option>
+      {% for d in doctores %}
+      <option value="{{ d.nombre }}" {% if request.args.get('doctor')==d.nombre %}selected{% endif %}>{{ d.nombre }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Generar</button>
+  <div class="quick no-print">
+    <a href="/reportes/rango?desde={{ hoy }}&hasta={{ hoy }}" class="btn btn-sm btn-info">Hoy</a>
+    <a href="/reportes/rango?desde={{ hace7 }}&hasta={{ hoy }}" class="btn btn-sm btn-info">7 d&iacute;as</a>
+    <a href="/reportes/rango?desde={{ hace30 }}&hasta={{ hoy }}" class="btn btn-sm btn-info">30 d&iacute;as</a>
+  </div>
+</form>
+
+{% if reporte %}
+<div class="no-print" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
+  <button class="btn btn-sm btn-success" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+  <a href="/reportes/pdf?desde={{ reporte.desde }}&hasta={{ reporte.hasta }}&doctor={{ request.args.get('doctor','') }}" class="btn btn-sm btn-danger"><i class="fas fa-file-pdf"></i> PDF</a>
+  <span style="font-size:12px;color:var(--text-light);margin-left:8px;align-self:center">{{ reporte.titulo }}</span>
+</div>
+
+<div class="stats">
+  <div class="stat-card">
+    <div class="icon" style="background:#3498db"><i class="fas fa-shopping-cart"></i></div>
+    <div class="info">
+      <div class="num">S/ {{ "%.2f"|format(reporte.total_ventas|float) }}</div>
+      <div class="label">Ventas</div>
+      {% if reporte.comparativa.ventas_anterior > 0 %}
+      <div class="comp-variacion {% if reporte.comparativa.variacion >= 0 %}pos{% else %}neg{% endif %}">
+        <i class="fas fa-{% if reporte.comparativa.variacion >= 0 %}arrow-up{% else %}arrow-down{% endif %}"></i>
+        {{ "%.1f"|format(reporte.comparativa.variacion) }}% vs periodo anterior (S/ {{ "%.2f"|format(reporte.comparativa.ventas_anterior) }})
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="icon" style="background:#e74c3c"><i class="fas fa-money-bill-wave"></i></div>
+    <div class="info">
+      <div class="num">S/ {{ "%.2f"|format(reporte.total_egresos|float) }}</div>
+      <div class="label">Egresos (Caja)</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="icon" style="background:#27ae60"><i class="fas fa-chart-line"></i></div>
+    <div class="info">
+      <div class="num">S/ {{ "%.2f"|format(reporte.margen_bruto|float) }}</div>
+      <div class="label">Margen Bruto</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="icon" style="background:#9b59b6"><i class="fas fa-stethoscope"></i></div>
+    <div class="info">
+      <div class="num">{{ reporte.total_consultas }}</div>
+      <div class="label">Consultas</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="icon" style="background:#f39c12"><i class="fas fa-cut"></i></div>
+    <div class="info">
+      <div class="num">{{ reporte.total_grooming }}</div>
+      <div class="label">Grooming</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="icon" style="background:#e74c3c"><i class="fas fa-credit-card"></i></div>
+    <div class="info">
+      <div class="num">{{ reporte.total_creditos }}</div>
+      <div class="label">Cr&eacute;ditos Pend.</div>
+    </div>
+  </div>
+</div>
+
+{% if reporte.ventas_por_dia|length > 1 %}
+<div class="card">
+  <h2><i class="fas fa-chart-bar"></i> Ventas por d&iacute;a</h2>
+  <div class="chart-wrap"><canvas id="chartVentas"></canvas></div>
+</div>
+{% endif %}
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px">
+  {% if reporte.top_productos %}
+  <div class="card">
+    <h2><i class="fas fa-cube"></i> Top Productos</h2>
+    <table><thead><tr><th>Producto</th><th style="text-align:center">Cant</th><th style="text-align:right">Total</th></tr></thead>
+    <tbody>{% for p in reporte.top_productos %}
+    <tr><td>{{ p.nombre or 'Sin nombre' }}</td><td style="text-align:center">{{ p.cantidad }}</td><td style="text-align:right">S/ {{ "%.2f"|format(p.total|float) }}</td></tr>
+    {% endfor %}</tbody></table>
+  </div>
+  {% endif %}
+  {% if reporte.top_doctores %}
+  <div class="card">
+    <h2><i class="fas fa-user-md"></i> Top Doctores</h2>
+    <table><thead><tr><th>Doctor</th><th style="text-align:center">Consultas</th></tr></thead>
+    <tbody>{% for d in reporte.top_doctores %}
+    <tr><td>{{ d.doctor }}</td><td style="text-align:center">{{ d.cnt }}</td></tr>
+    {% endfor %}</tbody></table>
+  </div>
+  {% endif %}
+  {% if reporte.grooming_servicios %}
+  <div class="card">
+    <h2><i class="fas fa-cut"></i> Grooming por Servicio</h2>
+    <table><thead><tr><th>Servicio</th><th style="text-align:center">Cantidad</th></tr></thead>
+    <tbody>{% for g in reporte.grooming_servicios %}
+    <tr><td>{{ g.servicio }}</td><td style="text-align:center">{{ g.cantidad }}</td></tr>
+    {% endfor %}</tbody></table>
+  </div>
+  {% endif %}
+</div>
+
+{% if reporte.ventas_list %}
+<div class="card">
+  <h2><i class="fas fa-file-invoice"></i> Ventas del per&iacute;odo ({{ reporte.ventas_list|length }})</h2>
+  <div style="overflow-x:auto">
+  <table>
+    <thead><tr><th>ID</th><th>Fecha</th><th>Total</th><th>Tipo</th><th>Estado</th><th class="no-print"></th></tr></thead>
+    <tbody>
+    {% for v in reporte.ventas_list %}
+    <tr>
+      <td>{{ v.id }}</td>
+      <td>{{ v.fecha }}</td>
+      <td>S/ {{ "%.2f"|format(v.total|float) }}</td>
+      <td><span class="badge badge-info">{{ v.tipo }}</span></td>
+      <td><span class="badge {% if v.estado=='completada' %}badge-success{% else %}badge-warning{% endif %}">{{ v.estado }}</span></td>
+      <td class="no-print"><span class="tbl-toggle" onclick="toggleItems(this,'items-{{ v.id }}')"><i class="fas fa-chevron-down"></i> items</span></td>
+    </tr>
+    <tbody class="items-detail" id="items-{{ v.id }}">
+      {% set items = reporte.ventas_items[v.id] %}
+      {% if items %}
+      {% for it in items %}
+      <tr><td colspan="6" style="padding-left:32px!important">{{ it.nombre }} <span style="color:var(--text-light)">x{{ it.cantidad }} @ S/ {{ "%.2f"|format(it.precio_unitario|float) }}</span> = S/ {{ "%.2f"|format(it.subtotal|float) }}</td></tr>
+      {% endfor %}
+      {% else %}
+      <tr><td colspan="6" style="padding-left:32px!important;color:var(--text-light)">Sin detalle</td></tr>
+      {% endif %}
+    </tbody>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+function toggleItems(el,targetId){
+  var tbody=document.getElementById(targetId);
+  if(!tbody)return;
+  tbody.classList.toggle('open');
+  el.innerHTML=tbody.classList.contains('open')?'<i class="fas fa-chevron-up"></i> items':'<i class="fas fa-chevron-down"></i> items';
+}
+{% if reporte and reporte.ventas_por_dia|length > 1 %}
+(function(){
+  var ctx=document.getElementById('chartVentas');
+  if(!ctx)return;
+  var labels=[],data=[];
+  {% for d in reporte.ventas_por_dia %}
+  labels.push('{{ d.fecha }}');
+  data.push({{ d.total|float }});
+  {% endfor %}
+  new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:labels,
+      datasets:[{
+        label:'Ventas',
+        data:data,
+        backgroundColor:'rgba(26,188,156,.7)',
+        borderColor:'rgba(26,188,156,1)',
+        borderWidth:1
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,ticks:{callback:function(v){return'S/ '+v.toFixed(0)}}}}
+    }
+  });
+})();
+{% endif %}
+</script>
+{% endblock %}

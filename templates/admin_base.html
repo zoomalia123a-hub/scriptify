@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCRIPTYFY - {{ title }}</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script>
+function initOtro(selectId,inputId){var sel=document.getElementById(selectId),inp=document.getElementById(inputId);if(!sel||!inp)return;function toggle(){var v=sel.value;if(v==='Otro'||v==='Otros'||v==='otro'||v==='otros'){sel.style.display='none';inp.style.display='block';inp.focus()}else{sel.style.display='';inp.style.display='none';inp.value=''}}sel.addEventListener('change',toggle);toggle()}
+function confirmDelete(msg){return confirm(msg||'Eliminar?')}
+</script>
+<style>
+html{background:#f0f4f8}*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+:root{--primary:#1abc9c;--primary-dark:#16a085;--bg:#f0f4f8;--sidebar:#1B4332;--text:#2c3e50;--text-light:#7f8c8d;--white:#fff;--danger:#e74c3c;--warning:#f39c12;--info:#3498db;--success:#27ae60}
+body{display:flex;min-height:100vh;background:var(--bg)}
+.sidebar{width:250px;background:var(--sidebar);color:rgba(255,255,255,.9);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:transform .3s}
+.sidebar .brand{padding:20px;font-size:20px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.1);background:white;min-height:80px;display:flex;align-items:center;justify-content:center}
+.sidebar .brand span{color:var(--primary)}
+.sidebar .user-info{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.08);font-size:13px;color:rgba(255,255,255,.8)}
+.sidebar nav{padding:8px 0;flex:1;overflow-y:auto}
+.sidebar nav a{display:flex;align-items:center;gap:12px;padding:10px 20px;color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;transition:background-color .15s,color .15s}
+.sidebar nav a:hover{background:rgba(255,255,255,.1);color:white}
+.sidebar nav a.active{background:var(--primary);color:white}
+.sidebar nav a i{width:20px;text-align:center;font-size:15px}
+.sidebar .badge-notif{background:var(--danger);color:white;font-size:10px;padding:2px 6px;border-radius:10px;margin-left:auto}
+/* Dark mode */
+body.dark{--bg:#1a1a2e;--text:#ecf0f1;--text-light:#95a5a6;--white:#2d3436;--sidebar:#0d1117}
+body.dark .card{background:#2d3436;color:#ecf0f1}
+body.dark td{color:#ecf0f1}
+body.dark th{color:#95a5a6}
+body.dark tr:hover{background:#353b48}
+body.dark input,body.dark select,body.dark textarea{background:#353b48;color:#ecf0f1;border-color:#555}
+body.dark .modal-box{background:#2d3436}
+body.dark .modal-box .form-group label{color:#fff;font-weight:700}
+.main{margin-left:250px;flex:1;padding:24px;min-height:100vh}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.topbar h1{font-size:22px;color:var(--text);font-weight:600}
+.topbar .date{font-size:13px;color:var(--text-light)}
+.card{background:var(--white);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.card h2{font-size:16px;color:var(--text);margin-bottom:16px;font-weight:600}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid #eee;font-size:13px}
+th{color:var(--text-light);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+td{color:var(--text)}
+tr:hover{background:#f8f9fa}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;text-decoration:none;border:none;cursor:pointer;transition:opacity .1s;font-weight:500}
+.btn:hover{opacity:.85}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn-primary{background:var(--primary);color:white}
+.btn-danger{background:var(--danger);color:white}
+.btn-warning{background:var(--warning);color:white}
+.btn-info{background:var(--info);color:white}
+.btn-success{background:var(--success);color:white}
+.btn-secondary{background:#95a5a6;color:white}
+.btn-icon{padding:6px;min-width:0}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:var(--text-light);margin-bottom:4px;font-weight:600;text-transform:uppercase}
+.modal-box .form-group label{color:#2c3e50;font-weight:700}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;transition:border .2s;background:var(--white)}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(26,188,156,.15)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.badge{display:inline-block;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600}
+.badge-success{background:#d5f5e3;color:#27ae60}
+.badge-warning{background:#fef9e7;color:#f39c12}
+.badge-danger{background:#fdedec;color:#e74c3c}
+.badge-info{background:#d6eaf8;color:#2980b9}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--white);border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;align-items:center;gap:16px}
+.stat-card .icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;color:white}
+.stat-card .info{flex:1}
+.stat-card .num{font-size:28px;font-weight:700;color:var(--text)}
+.stat-card .label{font-size:12px;color:var(--text-light);text-transform:uppercase;margin-top:2px}
+.empty{text-align:center;padding:40px;color:#95a5a6;font-size:14px}
+.alert{padding:12px 16px;border-radius:8px;margin-bottom:12px;font-size:13px}
+.alert-success{background:#d5f5e3;color:#27ae60}
+.alert-danger{background:#fdedec;color:#e74c3c}
+.alert-info{background:#d6eaf8;color:#2980b9}
+.pagination{display:flex;justify-content:center;gap:4px;margin-top:16px}
+.pagination a{padding:6px 12px;border-radius:6px;text-decoration:none;font-size:13px;background:var(--white);color:var(--text);border:1px solid #ddd}
+.pagination a.active{background:var(--primary);color:white;border-color:var(--primary)}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{background:var(--white);border-radius:16px;padding:24px;width:90%;max-width:500px;max-height:80vh;overflow-y:auto}
+.modal h2{font-size:18px;margin-bottom:16px}
+@media(max-width:768px){
+.sidebar{transform:translateX(-100%)}
+.sidebar.open{transform:translateX(0)}
+.main{margin-left:0;padding:16px}
+.stats{grid-template-columns:1fr}
+.form-row,.form-row-3{grid-template-columns:1fr}
+.mobile-toggle{display:block!important}
+}
+.mobile-toggle{display:none;position:fixed;top:12px;left:12px;z-index:150;background:var(--sidebar);color:white;border:none;padding:10px;border-radius:8px;font-size:18px;cursor:pointer}
+</style>
+</head>
+<body>
+<button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')"><i class="fas fa-bars"></i></button>
+<div class="sidebar">
+  <div class="brand"><img src="/photos/logo.png" alt="SCRIPTYFY" style="max-width:150px;height:auto;display:block"></div>
+  <div class="user-info"><i class="fas fa-user-circle"></i> {{ doctor }} {% if rol %}<span style="opacity:.5"> ({{ rol }})</span>{% endif %}</div>
+  <nav>
+    <a href="/dashboard" class="{% if active=='dashboard' %}active{% endif %}"><i class="fas fa-chart-pie"></i> Dashboard</a>
+    <a href="/historial" class="{% if active=='historial' %}active{% endif %}"><i class="fas fa-notes-medical"></i> Historial Cl&iacute;nico</a>
+    <a href="/duenos" class="{% if active=='duenos' %}active{% endif %}"><i class="fas fa-users"></i> Due&ntilde;os</a>
+    <a href="/citas" class="{% if active=='citas' %}active{% endif %}"><i class="fas fa-calendar-check"></i> Citas <span class="badge-notif" id="badge-citas" style="display:none">0</span></a>
+    <a href="/productos" class="{% if active=='productos' %}active{% endif %}"><i class="fas fa-box"></i> Inventario <span class="badge-notif" id="badge-stock" style="display:none">0</span></a>
+    {% if rol in ('admin','recepcion') %}<a href="/ventas" class="{% if active=='ventas' %}active{% endif %}"><i class="fas fa-shopping-cart"></i> Ventas</a>{% endif %}
+    {% if rol=='admin' %}<a href="/caja" class="{% if active=='caja' %}active{% endif %}"><i class="fas fa-cash-register"></i> Caja</a>{% endif %}
+    {% if rol in ('admin','recepcion') %}<a href="/cobros" class="{% if active=='cobros' %}active{% endif %}"><i class="fas fa-hand-holding-usd"></i> Cobros</a>{% endif %}
+    {% if rol in ('admin','doctor') %}<a href="/servicios" class="{% if active=='servicios' %}active{% endif %}"><i class="fas fa-stethoscope"></i> Servicios M&eacute;dicos</a>{% endif %}
+    <a href="/servicios-grooming" class="{% if active=='servicios_grooming' %}active{% endif %}"><i class="fas fa-cut"></i> Servicios Grooming</a>
+    {% if rol in ('admin','doctor') %}<a href="/combos" class="{% if active=='combos' %}active{% endif %}"><i class="fas fa-boxes"></i> Combos / Paquetes</a>{% endif %}
+    {% if rol=='admin' %}<a href="/proveedores" class="{% if active=='proveedores' %}active{% endif %}"><i class="fas fa-truck"></i> Proveedores</a>{% endif %}
+    {% if rol=='admin' %}<a href="/ordenes-compra" class="{% if active=='ordenes_compra' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> &Oacute;rdenes de Compra</a>{% endif %}
+    {% if rol=='admin' %}<a href="/compras/carga-rapida" class="{% if active=='carga_rapida' %}active{% endif %}"><i class="fas fa-file-upload"></i> Carga R&aacute;pida</a>{% endif %}
+    {% if rol in ('admin','doctor') %}<a href="/reportes" class="{% if active=='reportes' %}active{% endif %}"><i class="fas fa-file-alt"></i> Reportes</a>{% endif %}
+    {% if rol=='admin' %}<a href="/usuarios" class="{% if active=='usuarios' %}active{% endif %}"><i class="fas fa-user-shield"></i> Usuarios</a>{% endif %}
+    {% if rol in ('admin','doctor') %}<a href="/doctores" class="{% if active=='doctores' %}active{% endif %}"><i class="fas fa-user-md"></i> Doctores</a>{% endif %}
+    {% if rol=='admin' %}<a href="/suscripcion" class="{% if active=='suscripcion' %}active{% endif %}"><i class="fas fa-credit-card"></i> Suscripci&oacute;n</a>{% endif %}
+    {% if rol=='admin' %}<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:auto;padding:8px 0">
+      <a href="#" onclick="toggleDark()" style="font-size:12px"><i class="fas fa-moon"></i> <span id="darkLabel">Modo Oscuro</span></a>
+      <a href="/backup/descargar" style="font-size:12px;margin-top:4px"><i class="fas fa-download"></i> Backup</a>
+    </div>{% endif %}
+    {% if rol in ('doctor','recepcion') %}<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:auto;padding:8px 0">
+      <a href="#" onclick="toggleDark()" style="font-size:12px"><i class="fas fa-moon"></i> <span id="darkLabel">Modo Oscuro</span></a>
+    </div>{% endif %}
+    <a href="/logout" style="border-top:1px solid rgba(255,255,255,.1);padding:10px 20px"><i class="fas fa-sign-out-alt"></i> Salir</a>
+  </nav>
+</div>
+<div class="main">
+    <div class="topbar">
+    <div>
+      <h1>{{ title }}</h1>
+      <div class="date"><i class="far fa-calendar-alt"></i> {{ hoy }}</div>
+    </div>
+    <div><a href="/buscar" class="btn btn-sm btn-info"><i class="fas fa-search"></i></a></div>
+  </div>
+  <div id="sub-status" style="display:none;padding:10px 16px;border-radius:8px;margin-bottom:12px;font-size:13px;background:#fdedec;color:#e74c3c"></div>
+  {% if msg %}<div class="alert alert-success">{{ msg }}</div>{% endif %}
+  {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}{% for category, message in messages %}
+  <div class="alert alert-{{ category }}">{{ message }}</div>
+  {% endfor %}{% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</div>
+<script>
+// Subscription check
+(function(){
+  var s = document.getElementById('sub-status');
+  if(!s)return;
+  fetch('/api/suscripcion/estado').then(function(r){return r.json()}).then(function(d){
+    if(d.estado=='vencido'){
+      s.style.display='block';
+      s.innerHTML='<i class="fas fa-exclamation-triangle"></i> Suscripci\u00f3n vencida. Ve a <a href="/suscripcion" style="color:var(--warning);text-decoration:underline">Suscripci\u00f3n</a> para renovar.';
+    }else if(d.estado=='activo' && d.dias_restantes<=7){
+      s.style.display='block';
+      s.style.background='#fef9e7';
+      s.innerHTML='<i class="fas fa-clock"></i> Suscripci\u00f3n vence en '+d.dias_restantes+' d\u00edas';
+    }
+  }).catch(function(){});
+})();
+// Dark mode
+(function(){
+  if(localStorage.getItem('dark')=='1'){document.body.classList.add('dark');document.getElementById('darkLabel').textContent='Modo Claro'}
+})();
+function toggleDark(){
+  var b=document.body;
+  b.classList.toggle('dark');
+  var on=b.classList.contains('dark');
+  localStorage.setItem('dark',on?'1':'0');
+  document.getElementById('darkLabel').textContent=on?'Modo Claro':'Modo Oscuro';
+}
+// Cerrar sidebar al hacer clic fuera (mobile)
+document.querySelector('.main').addEventListener('click',function(){document.querySelector('.sidebar').classList.remove('open')});
+// Notificaciones
+(function(){
+  var c=document.getElementById('badge-citas'),s=document.getElementById('badge-stock');
+  if(!c)return;
+  fetch('/api/notificaciones').then(function(r){return r.json()}).then(function(d){
+    if(d.citas_hoy>0){c.style.display='inline';c.textContent=d.citas_hoy}
+    if(d.stock_bajo>0){s.style.display='inline';s.textContent=d.stock_bajo}
+  }).catch(function(){});
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

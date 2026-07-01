@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body style="font-family:sans-serif;padding:20px">
+<h3>Prueba DNI v2</h3>
+<input id="d" style="font-size:24px;padding:10px;width:180px" placeholder="DNI 8 dígitos">
+<button id="b" style="font-size:20px;padding:10px">Buscar</button>
+<div id="r" style="margin-top:15px;font-size:18px;padding:10px"></div>
+<script>
+document.getElementById('b').onclick=function(){
+  var v=document.getElementById('d').value.replace(/\s/g,'');
+  document.getElementById('r').innerHTML='<b>DEBUG:</b> v='+v+' len='+v.length;
+};
+</script></body></html>

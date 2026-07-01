@@ -1,0 +1,115 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<style>
+@media(max-width:600px){
+  .dueno-search{flex-direction:column}
+  table td,table th{padding:6px 4px;font-size:12px}
+  .filter-group{overflow-x:auto;white-space:nowrap}
+}
+</style>
+<form method="GET" action="/duenos" class="dueno-search" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px;padding:12px;background:var(--bg);border-radius:8px">
+  <input type="text" name="q" placeholder="Buscar nombre, DNI, tel&eacute;fono, email..." value="{{ q or '' }}" style="flex:1;min-width:180px;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px" autocomplete="off">
+  <button type="submit" class="btn btn-primary" style="padding:10px 20px"><i class="fas fa-search"></i> Buscar</button>
+  <a href="/duenos" class="btn btn-secondary" style="padding:10px 20px;text-decoration:none"><i class="fas fa-times"></i> Limpiar</a>
+  <a href="/duenos/exportar{% if q %}?q={{ q }}{% endif %}" class="btn btn-sm btn-info" style="padding:10px 20px;text-decoration:none"><i class="fas fa-file-excel"></i> Excel</a>
+</form>
+<div class="filter-group" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+  <a href="/duenos" class="btn btn-sm {% if not filtro %}btn-primary{% else %}btn-secondary{% endif %}" style="text-decoration:none">Todos</a>
+  <a href="/duenos?deuda=si{% if q %}&q={{ q }}{% endif %}" class="btn btn-sm {% if filtro=='deuda' %}btn-primary{% else %}btn-secondary{% endif %}" style="text-decoration:none"><i class="fas fa-exclamation-triangle"></i> Con deuda</a>
+  <a href="/duenos?deuda=no{% if q %}&q={{ q }}{% endif %}" class="btn btn-sm {% if filtro=='nodeuda' %}btn-primary{% else %}btn-secondary{% endif %}" style="text-decoration:none"><i class="fas fa-check-circle"></i> Sin deuda</a>
+  <a href="/duenos?pacientes=si{% if q %}&q={{ q }}{% endif %}" class="btn btn-sm {% if filtro=='pacientes' %}btn-primary{% else %}btn-secondary{% endif %}" style="text-decoration:none"><i class="fas fa-paw"></i> Con pacientes</a>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+  <div><span style="color:var(--text-light);font-size:13px">{{ total }} due&ntilde;o(s) &middot; P&aacute;gina {{ page }} de {{ total_pages }}</span></div>
+  <button class="btn btn-primary" onclick="abrirDuenoModal()"><i class="fas fa-plus"></i> Nuevo Due&ntilde;o</button>
+</div>
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr><th>Nombre</th><th>ID</th><th>DNI/RUC</th><th>Tel&eacute;fono</th><th>Email</th><th>Pacientes</th><th>Deuda</th><th>Acciones</th></tr></thead>
+  <tbody>{% for d in duenos %}<tr data-dueno-id="{{ d.id }}">
+    <td><a href="/duenos/{{ d.id }}" style="color:var(--primary);font-weight:600;text-decoration:none">{{ d.nombre }}</a></td>
+    <td>{{ d.id }}</td>
+    <td>{{ d.dni or '-' }}</td>
+    <td>{% if d.telefono %}<a href="https://wa.me/{{ d.telefono }}" target="_blank" style="color:#25D366;text-decoration:none"><i class="fab fa-whatsapp"></i> {{ d.telefono }}</a>{% else %}-{% endif %}</td>
+    <td>{{ d.email or '-' }}</td>
+    <td style="text-align:center"><span class="badge {% if d.num_pacientes>0 %}badge-info{% else %}badge-secondary{% endif %}">{{ d.num_pacientes }}</span></td>
+    <td>{% if d.deuda|float>0 %}<span style="color:#e74c3c;font-weight:700">S/ {{ "%.2f"|format(d.deuda|float) }}</span>{% else %}<span style="color:#27ae60">S/ 0.00</span>{% endif %}</td>
+    <td style="white-space:nowrap">
+      <a href="/duenos/{{ d.id }}" class="btn btn-sm btn-info" title="Ver detalle"><i class="fas fa-eye"></i></a>
+      <button class="btn btn-sm btn-primary" title="Editar" onclick='editarDueno({{ d.id }},{{ d.dni|tojson }},{{ d.nombre|tojson }},{{ d.telefono|tojson }},{{ d.email|tojson }},{{ d.direccion|tojson }})'><i class="fas fa-pen"></i></button>
+      <a href="/duenos/{{ d.id }}/eliminar" class="btn btn-sm btn-danger" title="Eliminar" onclick='return confirmarEliminarDueno({{ d.id }},{{ d.nombre|tojson }})'><i class="fas fa-trash"></i></a>
+    </td>
+  </tr>{% else %}<tr><td colspan="8"><div class="empty"><i class="fas fa-users" style="font-size:32px;display:block;margin-bottom:8px"></i>No hay due&ntilde;os registrados</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+
+{% if total_pages>1 %}
+<div class="pag" style="display:flex;justify-content:center;align-items:center;gap:6px;padding:12px;flex-wrap:wrap">
+  {% if page>1 %}<a href="/duenos?page={{ page-1 }}{% if q %}&q={{ q }}{% endif %}{% if filtro %}&{{ filtro_param }}={{ filtro_val }}{% endif %}" style="display:inline-block;padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;background:var(--bg);color:var(--text)">&laquo; Anterior</a>{% else %}<span style="color:#ccc">&laquo; Anterior</span>{% endif %}
+  {% for p in range(1,total_pages+1) %}
+    {% if p>=page-2 and p<=page+2 %}
+      <a href="/duenos?page={{ p }}{% if q %}&q={{ q }}{% endif %}{% if filtro %}&{{ filtro_param }}={{ filtro_val }}{% endif %}" style="display:inline-block;padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;{% if p==page %}background:var(--primary);color:#fff;font-weight:600{% else %}background:var(--bg);color:var(--text){% endif %}">{{ p }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if page<total_pages %}<a href="/duenos?page={{ page+1 }}{% if q %}&q={{ q }}{% endif %}{% if filtro %}&{{ filtro_param }}={{ filtro_val }}{% endif %}" style="display:inline-block;padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;background:var(--bg);color:var(--text)">Siguiente &raquo;</a>{% else %}<span style="color:#ccc">Siguiente &raquo;</span>{% endif %}
+</div>
+{% endif %}
+
+<div class="modal-overlay" id="modalDueno" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2 id="duenoModalTitle">Nuevo Due&ntilde;o</h2>
+    <form method="POST" id="duenoForm" action="/duenos/nuevo">
+      <input type="hidden" name="id" id="duenoEditId" value="">
+      <div class="form-group"><label>Nombre *</label><input name="nombre" id="duenoNombre" required></div>
+      <div class="form-row">
+        <div class="form-group"><label>DNI/RUC <span id="duenoDniStatus" style="display:none;font-size:11px;margin-left:6px"></span></label><input name="dni" id="duenoDni" onkeyup="if(event.which!==9){clearTimeout(window._ddt);window._ddt=setTimeout(function(){dnibuscar('duenoDni','duenoDniStatus','duenoNombre','duenoDireccion','duenoTelefono')},400)}"></div>
+        <div class="form-group"><label>Tel&eacute;fono</label><input name="telefono" id="duenoTelefono"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Email</label><input name="email" id="duenoEmail" type="email"></div>
+        <div class="form-group"><label>Direcci&oacute;n</label><input name="direccion" id="duenoDireccion"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button type="submit" class="btn btn-success" style="flex:1"><i class="fas fa-save"></i> Guardar</button>
+        <button type="button" class="btn btn-secondary" style="flex:1" onclick="cerrarModal('modalDueno')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+@keyframes highlightFade{0%{background:#d4edda}100%{background:transparent}}
+tr.highlight{animation:highlightFade 3s ease-out forwards}
+</style>
+<script src="/static/razas.js"></script>
+<script>
+function abrirDuenoModal(){document.getElementById('duenoModalTitle').textContent='Nuevo Due\u00f1o';document.getElementById('duenoForm').action='/duenos/nuevo';document.getElementById('duenoEditId').value='';document.getElementById('duenoNombre').value='';document.getElementById('duenoDni').value='';document.getElementById('duenoTelefono').value='';document.getElementById('duenoEmail').value='';document.getElementById('duenoDireccion').value='';document.getElementById('modalDueno').classList.add('active')}
+function editarDueno(id,dni,nombre,telefono,email,direccion){document.getElementById('duenoModalTitle').textContent='Editar Due\u00f1o';document.getElementById('duenoForm').action='/duenos/'+id+'/editar';document.getElementById('duenoEditId').value=id;document.getElementById('duenoNombre').value=nombre;document.getElementById('duenoDni').value=dni;document.getElementById('duenoTelefono').value=telefono;document.getElementById('duenoEmail').value=email;document.getElementById('duenoDireccion').value=direccion||'';document.getElementById('modalDueno').classList.add('active')}
+function cerrarModal(id){document.getElementById(id).classList.remove('active')}
+function confirmarEliminarDueno(id,nombre){
+  var x=new XMLHttpRequest();x.open('GET','/api/duenos/'+id+'/relaciones',false);x.send();
+  var r=JSON.parse(x.responseText);
+  var partes=[];
+  if(r.animales>0)partes.push(r.animales+' mascota(s)');
+  if(r.citas>0)partes.push(r.citas+' cita(s)');
+  if(r.ventas>0)partes.push(r.ventas+' venta(s)');
+  if(r.creditos>0)partes.push(r.creditos+' credito(s)');
+  var msg='=== ¡ATENCIÓN! ===\n\n';
+  msg+='¿Estás seguro de eliminar a '+nombre+'?\n\n';
+  if(partes.length){
+    msg+='Se eliminarán TODOS estos registros:\n';
+    msg+='• '+partes.join('\n• ')+'\n\n';
+    msg+='⚠️ Las mascotas y citas se borrarán permanentemente.\n';
+    msg+='Las ventas y créditos quedarán sin dueño asignado.\n\n';
+  }else{
+    msg+='El dueño no tiene registros asociados.\n\n';
+  }
+  msg+='¿Confirmar eliminación?';
+  return confirm(msg);
+}
+(function(){
+  var e=new URLSearchParams(window.location.search).get('edited');
+  if(e)document.querySelectorAll('tr[data-dueno-id="'+e+'"]').forEach(function(t){t.classList.add('highlight')});
+})();
+</script>
+{% endblock %}

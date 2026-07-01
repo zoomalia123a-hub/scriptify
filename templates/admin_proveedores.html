@@ -1,0 +1,76 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+  <div><span style="color:var(--text-light);font-size:13px">{{ proveedores|length }} proveedor(es)</span></div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-primary" onclick="abrirModalNuevoProveedor()"><i class="fas fa-plus"></i> Nuevo Proveedor</button>
+    <a href="/proveedores/exportar{% if q %}?q={{ q }}{% endif %}" class="btn btn-info"><i class="fas fa-file-excel"></i></a>
+  </div>
+</div>
+
+<form method="GET" style="display:flex;gap:8px;margin-bottom:12px;padding:12px;background:var(--bg);border-radius:8px">
+  <input type="text" name="q" placeholder="Buscar por nombre, contacto o RUC..." value="{{ q or '' }}" style="flex:1;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px">
+  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i></button>
+  <a href="/proveedores" class="btn btn-secondary btn-sm"><i class="fas fa-times"></i></a>
+</form>
+
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr><th>ID</th><th>Nombre</th><th>Contacto</th><th>Tel&eacute;fono</th><th>RUC</th><th>Email</th><th>Acciones</th></tr></thead>
+  <tbody>{% for p in proveedores %}<tr>
+    <td>{{ p.id }}</td>
+    <td style="font-weight:600">{{ p.nombre }}</td>
+    <td>{{ p.contacto or '-' }}</td>
+    <td>{{ p.telefono or '-' }}</td>
+    <td style="font-size:12px">{{ p.ruc or '-' }}</td>
+    <td>{{ p.email or '-' }}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-sm btn-primary" onclick="abrirModalEditarProveedor({{ p.id }},{{ p.nombre|tojson }},{{ p.contacto|tojson }},{{ p.telefono|tojson }},{{ p.ruc|tojson }},{{ p.email|tojson }},{{ p.direccion|tojson }})"><i class="fas fa-edit"></i></button>
+      <a href="/proveedores/{{ p.id }}/eliminar" class="btn btn-sm btn-danger" onclick="return confirmDelete()"><i class="fas fa-trash"></i></a>
+    </td>
+  </tr>{% else %}<tr><td colspan="7"><div class="empty">No hay proveedores</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+
+<div class="modal-overlay" id="modalProveedor">
+  <div class="modal" style="max-width:500px">
+    <h2 id="modalProveedorTitle">Nuevo Proveedor</h2>
+    <form method="POST" id="formProveedor">
+      <div class="form-group"><label>Nombre *</label><input type="text" name="nombre" id="prov_nombre" required></div>
+      <div class="form-row">
+        <div class="form-group"><label>Contacto</label><input type="text" name="contacto" id="prov_contacto"></div>
+        <div class="form-group"><label>Tel&eacute;fono</label><input type="text" name="telefono" id="prov_telefono"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Email</label><input type="email" name="email" id="prov_email"></div>
+        <div class="form-group"><label>RUC</label><input type="text" name="ruc" id="prov_ruc"></div>
+      </div>
+      <div class="form-group"><label>Direcci&oacute;n</label><input type="text" name="direccion" id="prov_direccion"></div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-success" id="btnGuardarProveedor">Guardar</button><button type="button" class="btn btn-secondary" onclick="cerrarModalProveedor()">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+<script>
+function abrirModalNuevoProveedor(){
+  document.getElementById('modalProveedorTitle').textContent='Nuevo Proveedor';
+  document.getElementById('formProveedor').action='/proveedores/nuevo';
+  ['nombre','contacto','telefono','email','ruc','direccion'].forEach(function(f){document.getElementById('prov_'+f).value=''});
+  document.getElementById('modalProveedor').classList.add('active');
+}
+function abrirModalEditarProveedor(id,nombre,contacto,telefono,ruc,email,direccion){
+  document.getElementById('modalProveedorTitle').textContent='Editar Proveedor';
+  document.getElementById('formProveedor').action='/proveedores/'+id+'/editar';
+  document.getElementById('prov_nombre').value=nombre;
+  document.getElementById('prov_contacto').value=contacto||'';
+  document.getElementById('prov_telefono').value=telefono||'';
+  document.getElementById('prov_email').value=email||'';
+  document.getElementById('prov_ruc').value=ruc||'';
+  document.getElementById('prov_direccion').value=direccion||'';
+  document.getElementById('modalProveedor').classList.add('active');
+}
+function cerrarModalProveedor(){
+  document.getElementById('modalProveedor').classList.remove('active');
+}
+</script>
+{% endblock %}

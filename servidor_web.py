@@ -1,4 +1,5 @@
-import os, sys, json, uuid, logging, csv, io, urllib.parse, hashlib, time, math, re
+import os
+import sunat_api, sys, json, uuid, logging, csv, io, urllib.parse, hashlib, time, math, re
 from datetime import date, datetime, timedelta
 from functools import wraps
 import requests
@@ -11,7 +12,6 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import database
 import storage
-import sunat_api
 
 database.init_db()
 
@@ -1209,6 +1209,19 @@ def guardar_venta():
             for p in pagos:
                 database.execute(conn, "INSERT INTO pagos (id_venta,monto,metodo,fecha) VALUES (?,?,?,?)", (venta_id, float(p.get("monto",0)), p.get("metodo","efectivo"), str(date.today())))
         conn.commit()
+        # SUNAT emit
+        try:
+            config = sunat_api.cargar_config()
+            if config.get("sunat_enabled") and tipo_comp in ("Boleta", "Factura"):
+                data = sunat_api.armar_comprobante(tipo_comp, serie, numero, str(date.today()), cliente_dni, cliente_nombre, subtotal, igv, total)
+                res = sunat_api.emitir_comprobante(data)
+                if res and "sunat_estado" in res:
+                    database.execute(conn, "UPDATE ventas SET sunat_estado=?, sunat_ticket=?, sunat_fecha_envio=datetime('now','localtime') WHERE id=?", (res.get("sunat_estado",""), res.get("sunat_ticket",""), venta_id))
+                    conn.commit()
+        except Exception as e:
+            print(f"SUNAT error: {e}")
+            try: database.execute(conn, "UPDATE ventas SET sunat_estado=? WHERE id=?", ("error", venta_id)); conn.commit()
+            except: pass
         conn.close()
         return redirect(url_for("ticket", venta_id=venta_id))
     except Exception as e:
@@ -1259,6 +1272,20 @@ def anular_venta(id):
         nc_id = database.fetchone(conn, "SELECT MAX(id) as id FROM notas_credito")["id"]
         database.execute(conn,"UPDATE ventas SET estado='anulada' WHERE id=?",(id,))
         conn.commit()
+        # SUNAT NC emit
+        try:
+            config = sunat_api.cargar_config()
+            if config.get("sunat_enabled") and v:
+                original = database.fetchone(conn, "SELECT serie, numero, sunat_estado FROM ventas WHERE id=?", (id,))
+                if original and original.get("sunat_estado") in ("aceptado", "pendiente"):
+                    data = sunat_api.armar_comprobante("Nota Credito", original["serie"], original["numero"],
+                        str(date.today()), v.get("cliente_dni",""), v.get("cliente_nombre",""), nc_subtotal, nc_igv, nc_total, nc_id)
+                    res = sunat_api.emitir_comprobante(data)
+                    if res and "sunat_estado" in res:
+                        database.execute(conn, "UPDATE notas_credito SET sunat_estado=?, sunat_ticket=?, sunat_fecha_envio=datetime('now','localtime') WHERE id=?", (res.get("sunat_estado",""), res.get("sunat_ticket",""), nc_id))
+                        conn.commit()
+        except Exception as e:
+            print(f"SUNAT NC error: {e}")
         conn.close()
         return redirect(url_for("ver_nota_credito", id=nc_id))
     except Exception as e:
@@ -1266,81 +1293,6 @@ def anular_venta(id):
         conn.close()
         logger.error("Error al anular venta: %s", e)
         return f"Error al anular venta: {e}", 500
-
-
-
-@app.route("/ventas/<int:id>/emitir-sunat", methods=["POST"])
-@login_required
-@role_required('admin')
-def emitir_sunat(id):
-    conn = database.get_db()
-    v = database.fetchone(conn, "SELECT * FROM ventas WHERE id=?", (id,))
-    if not v or v["estado"] != "completada":
-        conn.close()
-        flash("Venta no encontrada o no completada", "error")
-        return redirect(url_for("ver_venta", id=id))
-    sunat_estado = v.get("sunat_estado", "pendiente") or "pendiente"
-    if sunat_estado in ("aceptado", "pendiente"):
-        flash("Ya se envio un comprobante a SUNAT (estado: %s)" % sunat_estado, "warning")
-        conn.close()
-        return redirect(url_for("ver_venta", id=id))
-    items = database.fetchall(conn, "SELECT * FROM venta_items WHERE id_venta=?", (id,))
-    conn.close()
-    data = sunat_api.armar_comprobante(v, items)
-    res = sunat_api.emitir_comprobante(data)
-    if res.get("success") or res.get("ticket"):
-        ticket = res.get("ticket", "")
-        hash_val = res.get("hash", "")
-        conn = database.get_db()
-        database.execute(conn, "UPDATE ventas SET sunat_estado=?, sunat_ticket=?, sunat_hash=?, sunat_fecha_envio=? WHERE id=?",
-            ("pendiente", ticket, hash_val, str(date.today()), id))
-        conn.commit()
-        conn.close()
-        flash("Comprobante enviado a SUNAT. Ticket: " + str(ticket), "success")
-    else:
-        flash("Error al emitir: " + res.get("message", "Error desconocido"), "error")
-    return redirect(url_for("ver_venta", id=id))
-
-@app.route("/ventas/<int:id>/check-sunat", methods=["POST"])
-@login_required
-@role_required('admin')
-def check_sunat(id):
-    conn = database.get_db()
-    v = database.fetchone(conn, "SELECT * FROM ventas WHERE id=?", (id,))
-    if not v or not v.get("sunat_ticket"):
-        conn.close()
-        flash("No hay ticket pendiente", "warning")
-        return redirect(url_for("ver_venta", id=id))
-    conn.close()
-    res = sunat_api.consultar_estado(v["sunat_ticket"])
-    if res.get("success"):
-        estado_sunat = res.get("payload", {}).get("estado", "pendiente")
-        cdr = res.get("payload", {}).get("cdr", "")
-        conn = database.get_db()
-        database.execute(conn, "UPDATE ventas SET sunat_estado=?, sunat_cdr_xml=? WHERE id=?",
-            (estado_sunat, cdr, id))
-        conn.commit()
-        conn.close()
-        flash("Estado actualizado: " + estado_sunat, "success")
-    else:
-        flash("Error al consultar SUNAT: " + res.get("message", "Error desconocido"), "error")
-    return redirect(url_for("ver_venta", id=id))
-
-@app.route("/api/consultar-ruc", methods=["POST"])
-def api_consultar_ruc():
-    data = request.get_json()
-    if not data or not data.get("ruc"):
-        return jsonify({"success": False, "message": "RUC requerido"})
-    res = sunat_api.consultar_ruc(data["ruc"])
-    return jsonify(res)
-
-@app.route("/api/consultar-dni", methods=["POST"])
-def api_consultar_dni():
-    data = request.get_json()
-    if not data or not data.get("dni"):
-        return jsonify({"success": False, "message": "DNI requerido"})
-    res = sunat_api.consultar_dni(data["dni"])
-    return jsonify(res)
 
 @app.route("/nota-credito/<int:id>")
 @login_required
@@ -2254,7 +2206,7 @@ def crear_orden_compra():
     productos = database.fetchall(conn, "SELECT id,nombre,precio_compra,precio_venta FROM productos WHERE activo=1 ORDER BY nombre")
     conn.close()
     return render_template("admin_orden_compra_form.html", proveedores=proveedores, productos=productos,
-        hoy=str(date.today()), title="Nueva Orden de Compra", active="ordenes_compra", **_ctx())
+        title="Nueva Orden de Compra", active="ordenes_compra", **_ctx())
 
 @app.route("/ordenes-compra/<int:id>")
 @login_required
@@ -3404,27 +3356,33 @@ def exportar_cobros():
     conn = database.get_db()
     filtro = request.args.get("filtro", "pendientes")
     q = request.args.get("q", "").strip()
-    where = "WHERE rc.id_registro IS NOT NULL"
+    where = "WHERE 1=1"
     if filtro == "cobrados":
-        where += " AND rc.cobrado=1"
+        where += " AND cp.cobrado=1"
     else:
-        where += " AND (rc.cobrado IS NULL OR rc.cobrado=0)"
+        where += " AND (cp.cobrado IS NULL OR cp.cobrado=0)"
     if q:
         where += " AND (a.nombre LIKE ? OR d.nombre LIKE ?)"
     params = ["%" + q + "%", "%" + q + "%"] if q else []
     sql = f"""
-        SELECT rc.id, rc.monto, a.nombre as animal_nombre, d.nombre as dueno_nombre,
-               rc.fecha, rc.cobrado, rc.cobrado_en, rc.metodo_pago, rc.observacion, sv.nombre as servicio_nombre
-        FROM registros_cobro rc
-        LEFT JOIN registros_medicos rm ON rc.id_registro = rm.id
-        LEFT JOIN animales a ON rm.id_animal = a.id
+        SELECT cp.id, cp.total as monto, a.nombre as animal_nombre, d.nombre as dueno_nombre,
+               cp.fecha, cp.cobrado, cp.cobrado_en, cp.metodo_pago, cp.observacion, cp.servicios
+        FROM cobros_pendientes cp
+        LEFT JOIN animales a ON cp.id_animal = a.id
         LEFT JOIN duenos d ON a.id_dueno = d.id
-        LEFT JOIN servicios_medicos sv ON rm.id_servicio = sv.id
         {where}
-        ORDER BY rc.fecha DESC
+        ORDER BY cp.fecha DESC
     """
     rows = database.fetchall(conn, sql, params) if params else database.fetchall(conn, sql)
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Border, Side
     wb = openpyxl.Workbook()
@@ -3440,7 +3398,7 @@ def exportar_cobros():
         cell.fill = hdr_fill; cell.font = hdr_font; cell.border = border
     for r, row in enumerate(rows, 2):
         vals = [row["id"], row["animal_nombre"] or "", row["dueno_nombre"] or "",
-                row["servicio_nombre"] or "", row["monto"], row["fecha"] or "",
+                row.get("servicio_nombre", "") or "", row["monto"], row["fecha"] or "",
                 "Cobrado" if row["cobrado"] else "Pendiente",
                 row["cobrado_en"] or "", row["metodo_pago"] or "", row["observacion"] or ""]
         for c, v in enumerate(vals, 1):

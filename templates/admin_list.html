@@ -1,0 +1,13 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+  <div><span style="color:var(--text-light);font-size:13px">{{ items|length }} registro(s)</span></div>
+  {% if create %}<a href="/{{ create }}/nuevo" class="btn btn-primary"><i class="fas fa-plus"></i> Nuevo</a>{% endif %}
+</div>
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr>{% for l in labels %}<th>{{ l }}</th>{% endfor %}<th style="width:100px">Acciones</th></tr></thead>
+  <tbody>{% for it in items %}<tr>{% for c in cols %}<td>{% if c=='id' %}{{ it[c] }}{% elif c=='stock' %}<span class="badge {% if it[c]<=5 %}badge-danger{% elif it[c]<=15 %}badge-warning{% else %}badge-success{% endif %}">{{ it[c] }}</span>{% elif c in ('precio_compra','precio_venta','total') %}S/ {{ "%.2f"|format(it[c]|float) }}{% else %}{{ it[c] or '-' }}{% endif %}</td>{% endfor %}<td>{% if detail %}<a href="/{{ edit }}/{{ it.id }}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>{% endif %}<a href="/{{ edit }}/{{ it.id }}/editar" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i></a><a href="/{{ edit }}/{{ it.id }}/eliminar" class="btn btn-sm btn-danger" onclick="return confirmDelete()"><i class="fas fa-trash"></i></a></td></tr>{% else %}<tr><td colspan="{{ labels|length+1 }}"><div class="empty"><i class="fas fa-inbox" style="font-size:32px;display:block;margin-bottom:8px"></i>No hay registros</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+{% endblock %}

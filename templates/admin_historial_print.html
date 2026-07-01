@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Historial Cl&iacute;nico - {{ a.nombre }}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Arial,sans-serif}
+body{padding:20px;color:#2c3e50}
+.header{text-align:center;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #1abc9c}
+.header h1{font-size:22px;margin-bottom:4px}
+.header .sub{color:#7f8c8d;font-size:13px}
+.info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px;padding:12px;background:#f8f9fa;border-radius:8px;font-size:13px}
+.info strong{color:#7f8c8d}
+h2{font-size:16px;color:#1abc9c;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid #e0e0e0}
+table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12px}
+th,td{padding:6px 8px;text-align:left;border-bottom:1px solid #eee}
+th{background:#f8f9fa;color:#7f8c8d;font-size:11px;text-transform:uppercase}
+.consulta{margin-bottom:10px;padding:10px;background:#f8f9fa;border-radius:6px;border-left:3px solid #1abc9c}
+.consulta .fecha{font-weight:600;font-size:13px}
+.consulta .detalle{font-size:12px;color:#555;margin-top:4px}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+.tag-peligro{background:#fdedec;color:#e74c3c}
+.tag-info{background:#d6eaf8;color:#2980b9}
+@media print{body{padding:0}.no-print{display:none}}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1><i class="fas fa-notes-medical"></i> Historial Cl&iacute;nico</h1>
+  <div class="sub">{{ a.nombre }} &middot; {{ a.especie or '?' }}{% if a.raza %} - {{ a.raza }}{% endif %}</div>
+</div>
+<div class="info">
+  <div><strong>Paciente:</strong> {{ a.nombre }}</div>
+  <div><strong>Especie:</strong> {{ a.especie or '?' }}</div>
+  {% if a.raza %}<div><strong>Raza:</strong> {{ a.raza }}</div>{% endif %}
+  {% if a.color %}<div><strong>Color:</strong> {{ a.color }}</div>{% endif %}
+  {% if a.edad %}<div><strong>Edad:</strong> {{ a.edad }} a&ntilde;o(s)</div>{% endif %}
+  {% if a.sexo %}<div><strong>Sexo:</strong> {{ a.sexo }}</div>{% endif %}
+  {% if a.peso %}<div><strong>Peso:</strong> {{ a.peso }} kg</div>{% endif %}
+  {% if a.fecha_nacimiento %}<div><strong>F. Nacimiento:</strong> {{ a.fecha_nacimiento }}</div>{% endif %}
+  <div><strong>Esterilizado:</strong> {{ 'S&iacute;' if a.esterilizado else 'No' }}</div>
+  <div><strong>Due&ntilde;o:</strong> {{ a.dueno_nombre }}</div>
+  {% if a.dueno_dni %}<div><strong>DNI:</strong> {{ a.dueno_dni }}</div>{% endif %}
+  {% if a.dueno_telefono %}<div><strong>Tel&eacute;fono:</strong> {{ a.dueno_telefono }}</div>{% endif %}
+</div>
+
+<h2>Consultas ({{ registros|length }})</h2>
+{% if registros %}
+{% for r in registros %}
+<div class="consulta">
+  <div class="fecha">{{ r.fecha }}{% if r.hora %} {{ r.hora }}{% endif %} &middot; Dr. {{ r.doctor or '-' }}</div>
+  {% if r.peso %}<div class="detalle"><strong>Peso:</strong> {{ r.peso }} kg</div>{% endif %}
+  {% if r.diagnostico %}<div class="detalle"><strong>Diagn&oacute;stico:</strong> {{ r.diagnostico }}</div>{% endif %}
+  {% if r.anamnesis %}<div class="detalle"><strong>Anamnesis:</strong> {{ r.anamnesis }}</div>{% endif %}
+  {% if r.diagnostico_presuntivo %}<div class="detalle"><strong>Dx Presuntivo:</strong> {{ r.diagnostico_presuntivo }}</div>{% endif %}
+  {% if r.diagnostico_definitivo %}<div class="detalle"><strong>Dx Definitivo:</strong> {{ r.diagnostico_definitivo }}</div>{% endif %}
+  {% if r.tratamiento %}<div class="detalle"><strong>Tratamiento:</strong> {{ r.tratamiento }}</div>{% endif %}
+  {% if r.observaciones %}<div class="detalle"><strong>Observaciones:</strong> {{ r.observaciones }}</div>{% endif %}
+  {% if r.proximo_control %}<div class="detalle"><strong>Pr&oacute;ximo control:</strong> {{ r.proximo_control }}</div>{% endif %}
+</div>
+{% endfor %}
+{% else %}<p style="color:#95a5a6;font-size:13px">Sin consultas registradas.</p>{% endif %}
+
+<h2>Vacunas ({{ vacunas|length }})</h2>
+{% if vacunas %}
+<table><thead><tr><th>Fecha</th><th>Nombre</th><th>Lote</th><th>Dosis</th><th>Pr&oacute;xima</th><th>Doctor</th><th>Observaciones</th></tr></thead>
+<tbody>{% for v in vacunas %}<tr>
+  <td>{{ v.fecha }}</td><td>{{ v.nombre }}</td><td>{{ v.lote or '-' }}</td><td>{{ v.dosis or '-' }}</td>
+  <td>{% if v.proxima_dosis %}{{ v.proxima_dosis }}{% else %}-{% endif %}</td>
+  <td>{{ v.doctor or '-' }}</td><td>{{ v.observaciones or '-' }}</td>
+</tr>{% endfor %}</tbody></table>
+{% else %}<p style="color:#95a5a6;font-size:13px">Sin vacunas registradas.</p>{% endif %}
+
+<h2>Alergias ({{ alergias|length }})</h2>
+{% if alergias %}
+<table><thead><tr><th>Al&eacute;rgeno</th><th>Tipo</th><th>Severidad</th><th>Observaciones</th></tr></thead>
+<tbody>{% for al in alergias %}<tr>
+  <td>{{ al.alergeno }}</td><td>{{ al.tipo or '-' }}</td>
+  <td>{% if al.severidad=='grave' %}<span class="tag tag-peligro">Grave</span>{% elif al.severidad=='moderada' %}Moderada{% else %}Leve{% endif %}</td>
+  <td>{{ al.observaciones or '-' }}</td>
+</tr>{% endfor %}</tbody></table>
+{% else %}<p style="color:#95a5a6;font-size:13px">Sin alergias registradas.</p>{% endif %}
+
+<h2>Medicaci&oacute;n ({{ medicacion|length }})</h2>
+{% if medicacion %}
+<table><thead><tr><th>Medicamento</th><th>Dosis</th><th>Frecuencia</th><th>V&iacute;a</th><th>Inicio</th><th>Fin</th></tr></thead>
+<tbody>{% for m in medicacion %}<tr>
+  <td>{{ m.medicamento }}</td><td>{{ m.dosis }}</td><td>{{ m.frecuencia }}</td>
+  <td>{{ m.via or '-' }}</td><td>{{ m.fecha_inicio }}</td><td>{{ m.fecha_fin or 'Indefinido' }}</td>
+</tr>{% endfor %}</tbody></table>
+{% else %}<p style="color:#95a5a6;font-size:13px">Sin medicaci&oacute;n activa.</p>{% endif %}
+
+<h2>Ex&aacute;menes Auxiliares ({{ examenes|length }})</h2>
+{% if examenes %}
+<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Nombre</th><th>Resultados</th><th>Observaciones</th></tr></thead>
+<tbody>{% for e in examenes %}<tr>
+  <td>{{ e.fecha }}</td><td>{{ e.tipo }}</td><td>{{ e.nombre }}</td>
+  <td>{{ e.resultados or '-' }}</td><td>{{ e.observaciones or '-' }}</td>
+</tr>{% endfor %}</tbody></table>
+{% else %}<p style="color:#95a5a6;font-size:13px">Sin ex&aacute;menes auxiliares.</p>{% endif %}
+
+<div style="text-align:center;margin-top:24px;padding-top:12px;border-top:1px solid #e0e0e0;font-size:11px;color:#95a5a6">
+  Generado el {{ hoy }} &middot; SCRIPTYFY Veterinaria
+</div>
+<div class="no-print" style="text-align:center;margin-top:16px">
+  <button onclick="window.print()" style="padding:10px 24px;background:#1abc9c;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px"><i class="fas fa-print"></i> Imprimir / PDF</button>
+  <button onclick="window.close()" style="padding:10px 24px;background:#95a5a6;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;margin-left:8px">Cerrar</button>
+</div>
+</body>
+</html>

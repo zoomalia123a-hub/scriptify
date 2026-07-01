@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Historial Cl&iacute;nico</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Segoe UI',Arial,sans-serif; background:#f0f4f8; min-height:100vh; padding:12px; padding-bottom:80px; }
+.header { background:white; border-radius:12px; box-shadow:0 1px 6px rgba(0,0,0,.08); padding:16px; margin-bottom:12px; }
+.header h1 { font-size:18px; color:#2c3e50; }
+.header span { color:#999; font-size:13px; }
+.card { background:white; border-radius:10px; box-shadow:0 1px 5px rgba(0,0,0,.07); padding:14px; margin-bottom:10px; }
+.card h2 { font-size:14px; color:#2c3e50; margin-bottom:6px; }
+.fecha { color:#888; font-size:12px; }
+.label { font-size:11px; color:#999; font-weight:bold; margin-top:6px; }
+.label:first-child { margin-top:0; }
+.valor { font-size:14px; color:#2c3e50; white-space:pre-wrap; }
+.separator { border:none; border-top:1px solid #f0f0f0; margin:8px 0; }
+.btn { display:block; padding:12px; font-size:15px; border:none; border-radius:10px; font-weight:bold; cursor:pointer; text-align:center; text-decoration:none; margin-top:8px; }
+.btn-secondary { background:#95a5a6; color:white; }
+.btn-primary { background:#2ecc71; color:white; width:100%; }
+.tag { display:inline-block; padding:2px 6px; border-radius:4px; font-size:11px; background:#3498db; color:white; margin-right:4px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Historial Cl&iacute;nico</h1>
+  <span>{{ paciente.nombre }} {% if paciente.especie %}({{ paciente.especie }}){% endif %} &mdash; Due&ntilde;o: {{ dueno.nombre }}</span>
+</div>
+
+{% for r in registros %}
+<div class="card">
+  <div class="fecha">{{ r.fecha }}{% if r.hora %} {{ r.hora }}{% endif %}{% if r.doctor %} &mdash; {{ r.doctor }}{% endif %}</div>
+
+  {% if r.anamnesis %}
+  <div class="label">Anamnesis</div>
+  <div class="valor">{{ r.anamnesis }}</div>
+  {% endif %}
+
+  {% if r.peso is not none and r.peso > 0 %}
+  <div class="label">Peso</div>
+  <div class="valor">{{ r.peso }} kg</div>
+  {% endif %}
+
+  {% if r.diagnostico_presuntivo %}
+  <div class="label">Diagn&oacute;stico Presuntivo</div>
+  <div class="valor">{{ r.diagnostico_presuntivo }}</div>
+  {% endif %}
+
+  {% if r.diagnostico_definitivo %}
+  <div class="label">Diagn&oacute;stico Definitivo</div>
+  <div class="valor">{{ r.diagnostico_definitivo }}</div>
+  {% endif %}
+
+  {% if r.diagnostico %}
+  <div class="label">Diagn&oacute;stico</div>
+  <div class="valor">{{ r.diagnostico }}</div>
+  {% endif %}
+
+  {% if r.tratamiento %}
+  <div class="label">Tratamiento</div>
+  <div class="valor">{{ r.tratamiento }}</div>
+  {% endif %}
+
+  {% if r.observaciones %}
+  <div class="label">Observaciones</div>
+  <div class="valor">{{ r.observaciones }}</div>
+  {% endif %}
+
+  {% if r.proximo_control %}
+  <div class="label">Pr&oacute;ximo Control</div>
+  <div class="valor">{{ r.proximo_control }}</div>
+  {% endif %}
+
+  {% if r.exam_ecografia or r.exam_radiografia or r.exam_hemograma or r.exam_bioquimico or r.exam_orina or r.exam_otros %}
+  <hr class="separator">
+  <div class="label">Ex&aacute;menes</div>
+  {% if r.exam_ecografia %}<div><span class="tag">Ecograf&iacute;a</span> {{ r.exam_ecografia }}</div>{% endif %}
+  {% if r.exam_radiografia %}<div><span class="tag">Radiograf&iacute;a</span> {{ r.exam_radiografia }}</div>{% endif %}
+  {% if r.exam_hemograma %}<div><span class="tag">Hemograma</span> {{ r.exam_hemograma }}</div>{% endif %}
+  {% if r.exam_bioquimico %}<div><span class="tag">Bioqu&iacute;mico</span> {{ r.exam_bioquimico }}</div>{% endif %}
+  {% if r.exam_orina %}<div><span class="tag">Orina</span> {{ r.exam_orina }}</div>{% endif %}
+  {% if r.exam_otros %}<div><span class="tag">Otros</span> {{ r.exam_otros }}</div>{% endif %}
+  {% endif %}
+</div>
+{% else %}
+<div class="card">
+  <div style="text-align:center;color:#aaa;padding:20px 0;">No hay registros m&eacute;dicos para este paciente</div>
+</div>
+{% endfor %}
+
+<div style="margin-top:12px;">
+  <a href="/consulta/{{ paciente.id }}" class="btn btn-secondary">&larr; Volver a Consulta</a>
+</div>
+</body>
+</html>

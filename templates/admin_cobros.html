@@ -1,0 +1,105 @@
+{% extends "admin_base.html" %}
+{% block content %}
+{% if msg %}<div class="alert alert-success">{{ msg }}</div>{% endif %}
+
+<div class="tabs" style="margin-bottom:12px">
+  <a href="/cobros?filtro=pendientes{% if q %}&amp;q={{ q }}{% endif %}" class="tab {% if filtro=='pendientes' %}active{% endif %}"><i class="fas fa-clock"></i> Pendientes</a>
+  <a href="/cobros?filtro=cobrados{% if q %}&amp;q={{ q }}{% endif %}" class="tab {% if filtro=='cobrados' %}active{% endif %}"><i class="fas fa-check-circle"></i> Cobrados</a>
+</div>
+
+<div class="stats">
+  <div class="stat-card"><div class="icon" style="background:#e74c3c"><i class="fas fa-hand-holding-usd"></i></div><div class="info"><div class="num">{{ total }}</div><div class="label">{{ 'Pendientes' if filtro=='pendientes' else 'Cobrados' }}</div></div></div>
+  <div class="stat-card"><div class="icon" style="background:#27ae60"><i class="fas fa-dollar-sign"></i></div><div class="info"><div class="num">S/ {{ "%.2f"|format(total_pendiente|float) }}</div><div class="label">Por Cobrar</div></div></div>
+</div>
+
+<form method="GET" action="/cobros" style="display:flex;gap:8px;align-items:center;margin-bottom:12px;padding:12px;background:var(--bg);border-radius:8px">
+  <input type="hidden" name="filtro" value="{{ filtro }}">
+  <input type="text" name="q" placeholder="Buscar por paciente o due&ntilde;o..." value="{{ q or '' }}" style="flex:1;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px" autocomplete="off">
+  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i></button>
+  {% if q %}<a href="/cobros?filtro={{ filtro }}" class="btn btn-secondary btn-sm"><i class="fas fa-times"></i></a>{% endif %}
+  <a href="/cobros/exportar?filtro={{ filtro }}{% if q %}&amp;q={{ q }}{% endif %}" class="btn btn-info btn-sm"><i class="fas fa-file-excel"></i></a>
+</form>
+
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr><th>ID</th><th>Paciente</th><th>Due&ntilde;o</th><th>Fecha</th><th>Servicios</th><th>Total</th>{% if filtro=='cobrados' %}<th>Pagado</th><th>M&eacute;todo</th><th>Comprobante</th>{% endif %}<th>Acciones</th></tr></thead>
+  <tbody>{% for c in cobros %}<tr>
+    <td>{{ c.id }}</td>
+    <td>{{ c.animal_nombre }}</td>
+    <td>{{ c.dueno_nombre }}</td>
+    <td>{{ c.fecha }}</td>
+    <td>{% for sv in c.servicios_list %}<span class="badge badge-info">{{ sv.nombre }}</span> {% endfor %}</td>
+    <td>S/ {{ '%.2f'|format(c.total|float) }}</td>
+    {% if filtro=='cobrados' %}
+    <td>{{ c.cobrado_en }}</td>
+    <td><span class="badge {% if c.metodo_pago=='efectivo' %}badge-success{% elif 'tarjeta' in c.metodo_pago %}badge-info{% elif 'yape' in c.metodo_pago or 'plin' in c.metodo_pago %}badge-warning{% else %}badge-secondary{% endif %}">{{ c.metodo_pago }}</span></td>
+    <td>{% if c.comprobante %}<a href="/comprobantes/{{ c.comprobante }}" target="_blank"><img src="/comprobantes/{{ c.comprobante }}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid #ddd"></a>{% else %}-{% endif %}</td>
+    {% endif %}
+    <td>
+      {% if not c.cobrado %}
+      <button class="btn btn-sm btn-success" onclick="cobrar({{ c.id }},{{ c.total }},{{ c.animal_nombre|tojson }},{{ c.dueno_nombre|tojson }},{{ c.servicios_list|tojson }})"><i class="fas fa-check"></i> Cobrar</button>
+      {% else %}
+      <span class="badge badge-success">Cobrado</span>
+      {% endif %}
+    </td>
+  </tr>{% else %}<tr><td colspan="{% if filtro=='cobrados' %}10{% else %}7{% endif %}"><div class="empty"><i class="fas fa-check-circle" style="font-size:32px;display:block;margin-bottom:8px"></i>{{ 'Sin cobros pendientes' if filtro=='pendientes' else 'No hay cobros realizados' }}</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+
+{% if total_pages>1 %}
+<div class="pag" style="display:flex;justify-content:center;align-items:center;gap:6px;padding:12px;flex-wrap:wrap">
+  {% if page>1 %}<a href="/cobros?filtro={{ filtro }}&amp;page={{ page-1 }}{% if q %}&amp;q={{ q }}{% endif %}" style="display:inline-block;padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;background:var(--bg);color:var(--text)">&laquo; Anterior</a>{% endif %}
+  {% for p in range(1,total_pages+1) %}{% if p>=page-2 and p<=page+2 %}<a href="/cobros?filtro={{ filtro }}&amp;page={{ p }}{% if q %}&amp;q={{ q }}{% endif %}" style="display:inline-block;padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;{% if p==page %}background:var(--primary);color:#fff;font-weight:600{% else %}background:var(--bg);color:var(--text){% endif %}">{{ p }}</a>{% endif %}{% endfor %}
+  {% if page<total_pages %}<a href="/cobros?filtro={{ filtro }}&amp;page={{ page+1 }}{% if q %}&amp;q={{ q }}{% endif %}" style="display:inline-block;padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;background:var(--bg);color:var(--text)">Siguiente &raquo;</a>{% endif %}
+</div>
+{% endif %}
+
+<div class="modal-overlay" id="modalCobrar" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal" style="text-align:center">
+    <h2><i class="fas fa-check-circle" style="color:var(--success);font-size:32px;display:block;margin-bottom:8px"></i> Confirmar Cobro</h2>
+    <p style="font-size:15px;margin:8px 0"><strong id="cobroAnimal"></strong></p>
+    <p style="color:var(--text-light);font-size:13px" id="cobroDueno"></p>
+    <p style="font-size:24px;font-weight:700;color:var(--success);margin:12px 0" id="cobroTotal"></p>
+    <form method="POST" id="cobroForm" enctype="multipart/form-data" style="text-align:left">
+      <div class="form-group">
+        <label>Fecha de cobro</label>
+        <input type="date" name="fecha_cobro" id="fechaCobro" style="width:100%;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px">
+      </div>
+      <div class="form-group">
+        <label>M&eacute;todo de pago</label>
+        <select name="metodo_pago" id="metodoPago" style="width:100%;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px">
+          <option value="efectivo">Efectivo</option>
+          <option value="tarjeta">Tarjeta</option>
+          <option value="yape">Yape</option>
+          <option value="plin">Plin</option>
+          <option value="transferencia">Transferencia</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Observaci&oacute;n</label>
+        <textarea name="observacion" rows="2" style="width:100%;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Comprobante (foto del pago)</label>
+        <input type="file" name="comprobante" accept="image/*" style="width:100%;padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button type="submit" class="btn btn-success" style="flex:1;padding:12px;font-size:15px"><i class="fas fa-check"></i> Confirmar Cobro</button>
+        <button type="button" class="btn btn-secondary" style="flex:1;padding:12px" onclick="cerrarModal('modalCobrar')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function cobrar(id,total,animal,dueno,servicios){
+  document.getElementById('cobroAnimal').textContent=animal;
+  document.getElementById('cobroDueno').textContent='Due\u00f1o: '+dueno;
+  document.getElementById('cobroTotal').textContent='S/ '+total.toFixed(2);
+  document.getElementById('cobroForm').action='/cobros/'+id+'/cobrar';
+  document.getElementById('fechaCobro').value=new Date().toISOString().split('T')[0];
+  document.getElementById('modalCobrar').classList.add('active');
+}
+function cerrarModal(id){document.getElementById(id).classList.remove('active')}
+</script>
+{% endblock %}

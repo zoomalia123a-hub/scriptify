@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cat&aacute;logo {{ tipo|capitalize }} - SCRIPTYFY</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,sans-serif}
+body{background:#f5f5f5;padding:20px;color:#2c3e50}
+.header{text-align:center;padding:30px 20px;background:white;border-radius:12px;margin-bottom:24px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.header h1{font-size:28px;color:#1abc9c;margin-bottom:4px}
+.header p{color:#7f8c8d;font-size:14px}
+.btn-group{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.btn-print{display:inline-flex;align-items:center;gap:6px;padding:10px 24px;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;text-decoration:none}
+.btn-print:hover{opacity:.85}
+.btn-pdf{background:#1abc9c}
+.btn-imprimir{background:#3498db}
+.categoria{margin-bottom:32px}
+.categoria h2{font-size:20px;color:#1B4332;padding:12px 20px;background:white;border-radius:10px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);border-left:4px solid #1abc9c}
+.productos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.card{background:white;border-radius:10px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);page-break-inside:avoid;break-inside:avoid}
+.card .foto{width:100%;min-height:140px;border-radius:8px;overflow:hidden;margin-bottom:12px;background:#f8f9fa;display:flex;align-items:center;justify-content:center;padding:12px}
+.card .foto img{max-width:100%;max-height:260px;width:auto;height:auto;display:block}
+.card .foto .no-foto{font-size:32px;color:#ccc}
+.card h3{font-size:15px;margin-bottom:6px;color:#2c3e50}
+.card .descrip{font-size:12px;color:#7f8c8d;margin-bottom:6px;line-height:1.4}
+.card .colores{font-size:12px;color:#95a5a6;margin-bottom:8px}
+.card .colores strong{color:#7f8c8d}
+.card .precio{font-size:18px;font-weight:700;color:#1abc9c}
+.card .precio-label{font-size:11px;color:#95a5a6;text-transform:uppercase;margin-bottom:2px}
+@media print{
+  body{background:white;padding:15px}
+  .header{box-shadow:none;border:1px solid #eee;padding:20px}
+  .btn-group{display:none}
+  .card{box-shadow:none;border:1px solid #eee;page-break-inside:avoid}
+  .categoria h2{box-shadow:none;border:1px solid #eee}
+  .productos-grid{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:600px){
+  .productos-grid{grid-template-columns:repeat(2,1fr)}
+  .header h1{font-size:22px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>SCRIPTYFY - Cat&aacute;logo {{ tipo|capitalize }}</h1>
+  <p><i class="fas fa-tag"></i> Precios por {{ tipo }} &middot; Todos los productos con stock disponible</p>
+  <div class="btn-group">
+    <a href="/catalogo/{{ tipo }}/pdf" class="btn-print btn-pdf"><i class="fas fa-download"></i> Descargar PDF</a>
+    <button class="btn-print btn-imprimir" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+  </div>
+</div>
+
+{% for cat, prods in by_cat|dictsort %}
+<div class="categoria">
+  <h2><i class="fas fa-folder"></i> {{ cat }}</h2>
+  <div class="productos-grid">
+    {% for p in prods %}
+    <div class="card">
+      <div class="foto">
+        {% if p.foto %}<img src="/productos_photos/{{ p.foto }}">{% else %}<div class="no-foto"><i class="fas fa-box"></i></div>{% endif %}
+      </div>
+      <h3>{{ p.nombre }}</h3>
+      {% if p.descripcion %}<div class="descrip">{{ p.descripcion[:80] }}{% if p.descripcion|length>80 %}...{% endif %}</div>{% endif %}
+      {% if p.colores %}<div class="colores"><strong>Colores:</strong> {{ p.colores }}</div>{% endif %}
+      <div class="precio-label">Precio {{ tipo }}</div>
+      <div class="precio">S/ {{ "%.2f"|format(p.precio_venta|float) if tipo=='menor' else (p.precio_venta|float * (1 - p.descuento_mayorista|float/100)) }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+</body>
+</html>

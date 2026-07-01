@@ -1,0 +1,79 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+  <div><span style="color:var(--text-light);font-size:13px">{{ items|length }} servicio(s)</span></div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-primary" onclick="document.getElementById('modalGrooming').classList.add('active')"><i class="fas fa-plus"></i> Nuevo Servicio</button>
+    <a href="/servicios-grooming/exportar" class="btn btn-info"><i class="fas fa-file-excel"></i></a>
+  </div>
+</div>
+
+<form method="GET" style="display:flex;gap:8px;margin-bottom:12px;padding:12px;background:var(--bg);border-radius:8px">
+  <input type="text" id="searchGrooming" placeholder="Buscar por nombre, descripción o tipo..." style="flex:1;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px" autocomplete="off">
+  <button type="button" class="btn btn-primary btn-sm" onclick="filtrarGrooming()"><i class="fas fa-search"></i></button>
+  <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('searchGrooming').value='';filtrarGrooming()"><i class="fas fa-times"></i></button>
+</form>
+
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr><th>ID</th><th>Nombre</th><th>Descripci&oacute;n</th><th>Precio</th><th>Duraci&oacute;n (min)</th><th>Tipo</th><th>Acciones</th></tr></thead>
+   <tbody id="groomingTableBody">{% for s in items %}<tr data-search="{{ s.nombre|lower }} {{ (s.descripcion or '')|lower }} {{ s.tipo|lower }}"><td>{{ s.id }}</td><td>{{ s.nombre }}</td><td>{{ s.descripcion or '-' }}</td><td>S/ {{ "%.2f"|format(s.precio|float) }}</td><td>{{ s.duracion_minutos }}</td><td><span class="badge badge-info">{{ s.tipo }}</span></td><td><button class="btn btn-sm btn-primary btn-edit-gs" data-id="{{ s.id }}" data-nombre="{{ s.nombre }}" data-descripcion="{{ s.descripcion or '' }}" data-precio="{{ s.precio }}" data-duracion="{{ s.duracion_minutos or '' }}" data-tipo="{{ s.tipo }}"><i class="fas fa-edit"></i></button><a href="/servicios-grooming/{{ s.id }}/eliminar" class="btn btn-sm btn-danger" onclick="return confirmDelete()"><i class="fas fa-trash"></i></a></td></tr>{% else %}<tr><td colspan="7"><div class="empty">No hay servicios de grooming</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+
+<div class="modal-overlay" id="modalGrooming" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>Nuevo Servicio de Grooming</h2>
+    <form method="POST" action="/servicios-grooming/nuevo">
+      <div class="form-group"><label>Nombre *</label><input type="text" name="nombre" required></div>
+      <div class="form-group"><label>Descripci&oacute;n</label><textarea name="descripcion" rows="2"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Precio (S/) *</label><input type="number" step="0.01" name="precio" required></div>
+        <div class="form-group"><label>Duraci&oacute;n (min)</label><input type="number" name="duracion_minutos" value="30"></div>
+      </div>
+      <div class="form-group"><label>Tipo</label><select id="gs_tipo_nuevo" name="tipo"><option value="Baño">Ba&ntilde;o</option><option value="Corte">Corte</option><option value="Cepillado">Cepillado</option><option value="Corte de uñas">Corte de u&ntilde;as</option><option value="Limpieza dental">Limpieza dental</option><option value="Otro">Otro</option></select><input id="gs_tipo_nuevo_custom" name="tipo" placeholder="Especificar tipo..." style="display:none;width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px"></div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-success">Guardar</button><button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').classList.remove('active')">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalEditarGS" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>Editar Servicio de Grooming</h2>
+    <form method="POST" id="formEditarGS">
+      <div class="form-group"><label>Nombre *</label><input type="text" name="nombre" id="egs_nombre" required></div>
+      <div class="form-group"><label>Descripci&oacute;n</label><textarea name="descripcion" id="egs_descripcion" rows="2"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Precio (S/) *</label><input type="number" step="0.01" name="precio" id="egs_precio" required></div>
+        <div class="form-group"><label>Duraci&oacute;n (min)</label><input type="number" name="duracion_minutos" id="egs_duracion"></div>
+      </div>
+      <div class="form-group"><label>Tipo</label><select name="tipo" id="egs_tipo"><option value="Baño">Ba&ntilde;o</option><option value="Corte">Corte</option><option value="Cepillado">Cepillado</option><option value="Corte de uñas">Corte de u&ntilde;as</option><option value="Limpieza dental">Limpieza dental</option><option value="Otro">Otro</option></select><input id="egs_tipo_custom" name="tipo" placeholder="Especificar tipo..." style="display:none;width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px"></div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-success">Guardar</button><button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').classList.remove('active')">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+<script>
+initOtro('gs_tipo_nuevo','gs_tipo_nuevo_custom');
+initOtro('egs_tipo','egs_tipo_custom');
+document.getElementById('groomingTableBody').addEventListener('click',function(e){
+  var btn=e.target.closest('.btn-edit-gs');
+  if(!btn)return;
+  document.getElementById('formEditarGS').action='/servicios-grooming/'+btn.getAttribute('data-id')+'/editar';
+  document.getElementById('egs_nombre').value=btn.getAttribute('data-nombre');
+  document.getElementById('egs_descripcion').value=btn.getAttribute('data-descripcion');
+  document.getElementById('egs_precio').value=parseFloat(btn.getAttribute('data-precio'))||0;
+  document.getElementById('egs_duracion').value=btn.getAttribute('data-duracion');
+  document.getElementById('egs_tipo').value=btn.getAttribute('data-tipo');
+  document.getElementById('modalEditarGS').classList.add('active');
+});
+function cerrarModal(id){document.getElementById(id).classList.remove('active')}
+function filtrarGrooming(){
+  var q=document.getElementById('searchGrooming').value.toLowerCase().trim();
+  document.querySelectorAll('#groomingTableBody tr').forEach(function(tr){
+    tr.style.display=(!q||tr.getAttribute('data-search').includes(q))?'':'none';
+  });
+}
+document.getElementById('searchGrooming').addEventListener('input',filtrarGrooming);
+</script>
+{% endblock %}

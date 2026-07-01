@@ -1,0 +1,28 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+  <h2>Documentos de {{ animal.nombre }}</h2>
+  <button class="btn btn-primary" onclick="document.getElementById('modalDoc').classList.add('active')"><i class="fas fa-upload"></i> Subir</button>
+</div>
+{% if documentos %}
+<table><thead><tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>Fecha</th><th>Archivo</th><th>Acciones</th></tr></thead><tbody>
+{% for d in documentos %}<tr><td>{{ d.id }}</td><td>{{ d.nombre }}</td><td><span class="badge badge-info">{{ d.tipo }}</span></td><td>{{ d.fecha }}</td><td>{% if d.archivo %}<a href="/examenes/{{ d.archivo }}" target="_blank" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>{% else %}-{% endif %}</td><td><a href="/documentos/{{ d.id }}/eliminar" class="btn btn-sm btn-danger" onclick="return confirmDelete()"><i class="fas fa-trash"></i></a></td></tr>{% endfor %}</tbody></table>
+{% else %}<div class="empty">Sin documentos</div>{% endif %}
+<a href="/animales/{{ animal.id }}" class="btn btn-secondary" style="margin-top:12px"><i class="fas fa-arrow-left"></i> Volver</a>
+</div>
+
+<div class="modal-overlay" id="modalDoc" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>Subir Documento</h2>
+    <form method="POST" action="/animales/{{ animal.id }}/documentos/nuevo" enctype="multipart/form-data">
+      <div class="form-group"><label>Nombre</label><input type="text" name="nombre" required></div>
+      <div class="form-group"><label>Tipo</label><select id="doc_tipo" name="tipo"><option value="otro">Otro</option><option value="analisis">An&aacute;lisis</option><option value="radiografia">Radiograf&iacute;a</option><option value="ecografia">Ecograf&iacute;a</option><option value="receta">Receta</option><option value="informe">Informe</option></select><input id="doc_tipo_custom" name="tipo" placeholder="Especificar tipo..." style="display:none;width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px"></div>
+      <div class="form-group"><label>Archivo</label><input type="file" name="archivo"></div>
+      <div class="form-group"><label>Observaciones</label><textarea name="observaciones" rows="2"></textarea></div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-success">Subir</button><button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').classList.remove('active')">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+<script>initOtro('doc_tipo','doc_tipo_custom');</script>
+{% endblock %}

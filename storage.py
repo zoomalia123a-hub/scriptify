@@ -2,6 +2,13 @@ import os
 import io
 import uuid
 from datetime import datetime
+from PIL import Image
+
+try:
+    from rembg import remove
+except ImportError:
+    def remove(data, *a, **kw):
+        return data
 
 S3_ENABLED = all(os.environ.get(k) for k in ('AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_S3_BUCKET'))
 
@@ -10,6 +17,8 @@ LOCAL_DIRS = {
     'photos': os.environ.get('PHOTOS_DIR', os.path.join(BASE_DIR, 'photos')),
     'examenes': os.environ.get('EXAMENES_DIR', os.path.join(BASE_DIR, 'examenes')),
     'documentos': os.environ.get('DOCS_DIR', os.path.join(BASE_DIR, 'documentos')),
+    'productos': os.environ.get('PRODUCTOS_DIR', os.path.join(BASE_DIR, 'productos_photos')),
+    'comprobantes': os.environ.get('COMPROBANTES_DIR', os.path.join(BASE_DIR, 'comprobantes')),
 }
 
 _S3_CLIENT = None
@@ -42,6 +51,18 @@ def save_file(file_obj, category='photos', filename=None):
         return filename, url
     else:
         os.makedirs(LOCAL_DIRS[category], exist_ok=True)
+        if category == 'productos':
+            try:
+                img_bytes = file_obj.read()
+                result = remove(img_bytes)
+                img = Image.open(io.BytesIO(result)).convert('RGBA')
+                filename = os.path.splitext(filename)[0] + '.png'
+                path = os.path.join(LOCAL_DIRS[category], filename)
+                img.save(path, 'PNG')
+                return filename, filename
+            except Exception as e:
+                pass
+        file_obj.seek(0)
         path = os.path.join(LOCAL_DIRS[category], filename)
         file_obj.save(path)
         return filename, filename

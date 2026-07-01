@@ -1,0 +1,81 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<style>
+@media(max-width:600px){
+  .detail-grid{grid-template-columns:1fr!important}
+  .detail-actions{flex-direction:column}
+}
+</style>
+<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+  <div>
+    <h2 style="margin:0"><i class="fas fa-user" style="color:var(--primary)"></i> {{ d.nombre }}</h2>
+    <div style="color:var(--text-light);font-size:13px;margin-top:4px">ID: {{ d.id }} {% if d.dni %}| DNI/RUC: {{ d.dni }}{% endif %}</div>
+  </div>
+  <div class="detail-actions" style="display:flex;gap:8px">
+    <a href="/duenos" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Volver</a>
+  </div>
+</div>
+
+<div class="detail-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+  <div class="card">
+    <h2><i class="fas fa-info-circle"></i> Datos de Contacto</h2>
+    <table style="width:100%">
+      <tr><td style="padding:6px 0;font-size:13px;color:var(--text-light);width:100px">Tel&eacute;fono</td><td style="padding:6px 0;font-size:14px">{% if d.telefono %}{{ d.telefono }} <a href="https://wa.me/{{ d.telefono }}" target="_blank" class="btn btn-sm btn-success" style="padding:3px 8px;font-size:11px"><i class="fab fa-whatsapp"></i></a>{% else %}-{% endif %}</td></tr>
+      <tr><td style="padding:6px 0;font-size:13px;color:var(--text-light)">Email</td><td style="padding:6px 0;font-size:14px">{{ d.email or '-' }}</td></tr>
+      <tr><td style="padding:6px 0;font-size:13px;color:var(--text-light)">Direcci&oacute;n</td><td style="padding:6px 0;font-size:14px">{{ d.direccion or '-' }}</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h2><i class="fas fa-chart-line"></i> Resumen</h2>
+    <table style="width:100%">
+      <tr><td style="padding:6px 0;font-size:13px;color:var(--text-light)">Pacientes</td><td style="padding:6px 0;font-size:14px;font-weight:600">{{ animales|length }}</td></tr>
+      <tr><td style="padding:6px 0;font-size:13px;color:var(--text-light)">Total gastado</td><td style="padding:6px 0;font-size:14px;font-weight:600">S/ {{ "%.2f"|format(total_gastado|float) }}</td></tr>
+      <tr><td style="padding:6px 0;font-size:13px;color:var(--text-light)">Deuda total</td><td style="padding:6px 0;font-size:14px;font-weight:700;{% if deuda>0 %}color:#e74c3c{% else %}color:#27ae60{% endif %}">S/ {{ "%.2f"|format(deuda|float) }}</td></tr>
+      {% if ultima_visita %}<tr><td style="padding:6px 0;font-size:13px;color:var(--text-light)">&Uacute;ltima visita</td><td style="padding:6px 0;font-size:14px;font-weight:600">{{ ultima_visita }}</td></tr>{% endif %}
+    </table>
+    <div style="margin-top:12px">
+      <a href="/historial?q={{ d.nombre }}" class="btn btn-sm btn-info"><i class="fas fa-notes-medical"></i> Ver historial cl&iacute;nico</a>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <h2 style="margin:0"><i class="fas fa-paw"></i> Pacientes ({{ animales|length }})</h2>
+    <a href="/animales/nuevo?dueno={{ d.id }}" class="btn btn-sm btn-success"><i class="fas fa-plus"></i> Nuevo Paciente</a>
+  </div>
+  {% if animales %}
+  <table>
+    <thead><tr><th>ID</th><th>Nombre</th><th>Especie</th><th>Raza</th><th>Edad</th><th>Acciones</th></tr></thead>
+    <tbody>{% for a in animales %}<tr>
+      <td>{{ a.id }}</td>
+      <td><a href="/animales/{{ a.id }}" style="color:var(--primary);text-decoration:none;font-weight:600">{{ a.nombre }}</a></td>
+      <td>{{ a.especie or '-' }}</td>
+      <td>{{ a.raza or '-' }}</td>
+      <td>{{ a.edad or '-' }}</td>
+      <td><a href="/animales/{{ a.id }}/editar" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i></a></td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty">No tiene pacientes registrados</div>{% endif %}
+</div>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+    <h2 style="margin:0"><i class="fas fa-shopping-cart"></i> Historial de Compras</h2>
+    {% if total_ventas > 20 %}<a href="/ventas?q={{ d.nombre }}" class="btn btn-sm btn-info">Ver todas ({{ total_ventas }})</a>{% endif %}
+  </div>
+  {% if ventas %}
+  <table>
+    <thead><tr><th>ID</th><th>Fecha</th><th>Comprobante</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody>{% for v in ventas %}<tr>
+      <td>{{ v.id }}</td>
+      <td>{{ v.fecha }}</td>
+      <td>{{ v.tipo_comprobante or v.tipo or '-' }}</td>
+      <td>S/ {{ "%.2f"|format(v.total|float) }}</td>
+      <td>{% if v.saldo_pendiente is defined and v.saldo_pendiente|float>0 %}<span class="badge badge-warning">Al cr&eacute;dito</span>{% else %}<span class="badge badge-success">Pagado</span>{% endif %}</td>
+      <td><a href="/ventas/{{ v.id }}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a></td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty">No tiene compras registradas</div>{% endif %}
+</div>
+{% endblock %}

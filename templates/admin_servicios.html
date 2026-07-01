@@ -1,0 +1,263 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<style>
+.insumos-row td{padding:0!important}
+.insumos-inner{padding:8px 12px 12px 40px;background:var(--bg)}
+.insumos-inner table{width:100%;font-size:12px}
+.insumos-inner table th{text-align:left;color:var(--text-light);font-weight:600;padding:4px 8px}
+.insumos-inner table td{padding:4px 8px}
+.cant-input{width:60px;padding:2px 4px;border:1px solid #ccc;border-radius:4px;text-align:center;font-size:12px}
+.cant-display{cursor:pointer;padding:2px 6px;border-radius:4px}
+.cant-display:hover{background:#e8f4fd}
+.search-box{width:100%;padding:10px 14px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px;margin-bottom:12px}
+</style>
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+  <div><span style="color:var(--text-light);font-size:13px">{{ servicios|length }} servicio(s)</span></div>
+  <button class="btn btn-primary" onclick="document.getElementById('modalServicio').classList.add('active')"><i class="fas fa-plus"></i> Nuevo Servicio</button>
+</div>
+
+<input type="text" class="search-box" id="searchServicio" placeholder="Buscar servicio..." oninput="filtrarServicios()">
+
+<div class="card" style="padding:0;overflow-x:auto">
+<table id="tablaServicios">
+  <thead><tr><th>ID</th><th>Nombre</th><th>Descripci&oacute;n</th><th>Precio</th><th>Costo Insumos</th><th>Tipo</th><th>Insumos</th><th>Acciones</th></tr></thead>
+  <tbody>{% for s in servicios %}<tr class="fila-servicio" data-search="{{ (s.nombre+' '+s.descripcion+' '+s.tipo)|lower }}">
+    <td>{{ s.id }}</td>
+    <td>{{ s.nombre }}</td>
+    <td>{{ s.descripcion or '-' }}</td>
+    <td>S/ {{ "%.2f"|format(s.precio|float) }}</td>
+    <td>S/ {{ "%.2f"|format(s.costo_insumos|float) }}</td>
+    <td><span class="badge badge-info">{{ s.tipo }}</span></td>
+    <td>
+      <button class="btn btn-sm {% if insumos_map[s.id] %}btn-warning{% else %}btn-secondary{% endif %}" onclick='toggleInsumos({{ s.id }})' style="font-size:11px">
+        <i class="fas fa-tasks"></i> {{ insumos_map[s.id]|length }}
+      </button>
+    </td>
+    <td>
+      <button class="btn btn-sm btn-primary" onclick='editarServicio({{ s.id }},{{ s.nombre|tojson }},{{ s.descripcion|tojson }},{{ s.precio|float|tojson }},{{ s.tipo|tojson }})'><i class="fas fa-edit"></i></button>
+      <a href="/servicios/{{ s.id }}/eliminar" class="btn btn-sm btn-danger" onclick='return confirm("Eliminar {{ s.nombre }}?")'><i class="fas fa-trash"></i></a>
+    </td>
+  </tr>
+  <tr class="insumos-row" id="insumosRow{{ s.id }}" style="display:none">
+    <td colspan="8">
+      <div class="insumos-inner">
+        <div style="display:flex;gap:16px;align-items:center;margin-bottom:8px">
+          <strong style="font-size:13px">Insumos de {{ s.nombre }}</strong>
+          {% if historial_map[s.id] %}<button class="btn btn-sm btn-outline" onclick='toggleHistorial({{ s.id }})' style="font-size:11px"><i class="fas fa-history"></i> Historial de uso</button>{% endif %}
+        </div>
+        {% if insumos_map[s.id] %}
+        <table id="insumosTable{{ s.id }}">
+          <thead><tr><th>Producto</th><th>Stock</th><th>Cantidad Requerida</th><th></th></tr></thead>
+          <tbody>
+          {% for ins in insumos_map[s.id] %}
+          <tr>
+            <td>{{ ins.producto_nombre }}</td>
+            <td><span class="badge {% if ins.stock<ins.cantidad %}badge-danger{% else %}badge-success{% endif %}">{{ ins.stock }}</span></td>
+            <td>
+              <span class="cant-display" id="cantDisplay{{ s.id }}_{{ ins.id_producto }}" ondblclick="editarCantidad({{ s.id }},{{ ins.id_producto }})">{{ ins.cantidad }}</span>
+              <input class="cant-input" id="cantInput{{ s.id }}_{{ ins.id_producto }}" value="{{ ins.cantidad }}" style="display:none" onblur="guardarCantidad({{ s.id }},{{ ins.id_producto }})" onkeydown="if(event.key==='Enter')this.blur()">
+            </td>
+            <td><button class="btn btn-sm btn-danger" onclick="eliminarInsumo({{ s.id }},{{ ins.id_producto }})"><i class="fas fa-times"></i></button></td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}<div class="empty" style="margin:4px 0">Sin insumos asignados</div>{% endif %}
+        <button class="btn btn-sm btn-primary" style="margin-top:6px" onclick='abrirInsumos({{ s.id }},{{ s.nombre|tojson }})'><i class="fas fa-plus"></i> Agregar Insumo</button>
+
+        {# Historial de uso #}
+        <div id="historial{{ s.id }}" style="display:none;margin-top:12px">
+          <strong style="font-size:13px">Historial de consumo</strong>
+          {% if historial_map[s.id] %}
+          <table style="margin-top:4px">
+            <thead><tr><th>Venta #</th><th>Fecha</th><th>Producto</th><th>Cant</th><th>Cliente</th></tr></thead>
+            <tbody>
+            {% for h in historial_map[s.id] %}
+            <tr><td>{{ h.venta_id }}</td><td>{{ h.fecha }}</td><td>{{ h.producto_nombre }}</td><td>{{ h.cantidad }}</td><td>{{ h.cliente_nombre }}</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+          {% else %}<div class="empty" style="margin:4px 0">Sin consumo registrado</div>{% endif %}
+        </div>
+      </div>
+    </td>
+  </tr>
+  {% else %}<tr><td colspan="8"><div class="empty">No hay servicios</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+
+{# MODAL: Nuevo Servicio #}
+<div class="modal-overlay" id="modalServicio" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>Nuevo Servicio M&eacute;dico</h2>
+    <form method="POST" action="/servicios/nuevo">
+      <div class="form-group"><label>Nombre *</label><input type="text" name="nombre" required></div>
+      <div class="form-group"><label>Descripci&oacute;n</label><textarea name="descripcion" rows="2"></textarea></div>
+      <div class="form-group"><label>Precio (S/) *</label><input type="number" step="0.01" name="precio" required></div>
+      <div class="form-group"><label>Tipo</label><select name="tipo"><option value="consulta">Consulta</option><option value="cirugia">Cirug&iacute;a</option><option value="hospitalizacion">Hospitalizaci&oacute;n</option><option value="medicacion">Medicaci&oacute;n</option><option value="procedimiento">Procedimiento</option><option value="laboratorio">Laboratorio</option></select></div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-success">Guardar</button><button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').classList.remove('active')">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+{# MODAL: Editar Servicio #}
+<div class="modal-overlay" id="modalEditarServicio" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>Editar Servicio</h2>
+    <form method="POST" id="formEditarServicio">
+      <div class="form-group"><label>Nombre *</label><input type="text" name="nombre" id="edit_nombre" required></div>
+      <div class="form-group"><label>Descripci&oacute;n</label><textarea name="descripcion" id="edit_descripcion" rows="2"></textarea></div>
+      <div class="form-group"><label>Precio (S/) *</label><input type="number" step="0.01" name="precio" id="edit_precio" required></div>
+      <div class="form-group"><label>Tipo</label><select name="tipo" id="edit_tipo"><option value="consulta">Consulta</option><option value="cirugia">Cirug&iacute;a</option><option value="hospitalizacion">Hospitalizaci&oacute;n</option><option value="medicacion">Medicaci&oacute;n</option><option value="procedimiento">Procedimiento</option><option value="laboratorio">Laboratorio</option></select></div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-success">Guardar</button><button type="button" class="btn btn-secondary" onclick="cerrarModal('modalEditarServicio')">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+{# MODAL: Agregar Insumo #}
+<div class="modal-overlay" id="modalInsumos" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal" style="max-width:480px">
+    <h2><i class="fas fa-tasks" style="color:var(--primary)"></i> Agregar Insumo a <span id="insumoServicioNombre"></span></h2>
+    <div style="display:flex;gap:16px;margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:13px">
+        <input type="radio" name="tipoInsumo" value="existente" checked onchange="toggleTipoInsumo()"> Producto existente
+      </label>
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:13px">
+        <input type="radio" name="tipoInsumo" value="nuevo" onchange="toggleTipoInsumo()"> Producto nuevo
+      </label>
+    </div>
+    <div id="divInsumoExistente">
+      <div class="form-group">
+        <label>Producto</label>
+        <input list="dlProdInsumo" id="prodInsumoInput" placeholder="Buscar producto..." style="width:100%;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px" autocomplete="off">
+        <datalist id="dlProdInsumo">{% for p in productos %}<option value="{{ p.nombre }}" data-id="{{ p.id }}" data-stock="{{ p.stock }}">{% endfor %}</datalist>
+      </div>
+    </div>
+    <div id="divInsumoNuevo" style="display:none">
+      <div class="form-group"><label>Nombre</label><input type="text" id="nuevoProdNombre" placeholder="Nombre del producto" style="width:100%;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px"></div>
+      <div style="display:flex;gap:8px">
+        <div class="form-group" style="flex:1"><label>Precio compra (S/)</label><input type="number" step="0.01" id="nuevoProdPrecio" placeholder="0.00" style="width:100%;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px"></div>
+        <div class="form-group" style="flex:1"><label>Stock</label><input type="number" id="nuevoProdStock" placeholder="0" style="width:100%;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Cantidad Requerida (para el servicio)</label>
+      <input type="number" id="insumoCantidad" value="1" min="1" style="width:100%;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button type="button" class="btn btn-success" style="flex:1" onclick="guardarInsumo()"><i class="fas fa-save"></i> Agregar</button>
+      <button type="button" class="btn btn-secondary" style="flex:1" onclick="cerrarModal('modalInsumos')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var _insumoServiceId = null;
+
+function toggleTipoInsumo(){
+  var isNuevo=document.querySelector('input[name="tipoInsumo"]:checked').value==='nuevo';
+  document.getElementById('divInsumoExistente').style.display=isNuevo?'none':'';
+  document.getElementById('divInsumoNuevo').style.display=isNuevo?'':'none';
+}
+
+function toggleInsumos(id){
+  var r=document.getElementById('insumosRow'+id);
+  if(r) r.style.display=r.style.display==='none'?'':'none';
+}
+
+function toggleHistorial(id){
+  var h=document.getElementById('historial'+id);
+  if(h) h.style.display=h.style.display==='none'?'':'none';
+}
+
+function editarServicio(id,nombre,descripcion,precio,tipo){
+  document.getElementById('formEditarServicio').action='/servicios/'+id+'/editar';
+  document.getElementById('edit_nombre').value=nombre;
+  document.getElementById('edit_descripcion').value=descripcion||'';
+  document.getElementById('edit_precio').value=precio;
+  document.getElementById('edit_tipo').value=tipo;
+  document.getElementById('modalEditarServicio').classList.add('active');
+}
+
+function abrirInsumos(id,nombre){
+  _insumoServiceId=id;
+  document.getElementById('insumoServicioNombre').textContent=nombre;
+  document.getElementById('prodInsumoInput').value='';
+  document.getElementById('insumoCantidad').value=1;
+  document.getElementById('modalInsumos').classList.add('active');
+}
+
+function guardarInsumo(){
+  var tipo=document.querySelector('input[name="tipoInsumo"]:checked').value;
+  var cant=parseInt(document.getElementById('insumoCantidad').value)||1;
+  if(tipo==='existente'){
+    var inp=document.getElementById('prodInsumoInput');
+    var nom=inp.value.trim();
+    if(!nom){alert('Selecciona un producto');return}
+    var dl=document.getElementById('dlProdInsumo');
+    var opt=null;
+    for(var i=0;i<dl.options.length;i++){
+      if(dl.options[i].value.toLowerCase()===nom.toLowerCase()){opt=dl.options[i];break}
+    }
+    if(!opt){alert('Producto no encontrado');return}
+    var pid=opt.getAttribute('data-id');
+    fetch('/servicios/'+_insumoServiceId+'/insumos/agregar',{
+      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:'producto_id='+pid+'&cantidad='+cant
+    }).then(function(r){if(r.ok) location.reload(); else return r.text().then(function(t){alert('Error: '+t)})})
+     .catch(function(e){alert('Error: '+e.message)});
+  } else {
+    var nombre=document.getElementById('nuevoProdNombre').value.trim();
+    if(!nombre){alert('Ingresa el nombre del producto');return}
+    var pCompra=parseFloat(document.getElementById('nuevoProdPrecio').value)||0;
+    var stock=parseInt(document.getElementById('nuevoProdStock').value)||0;
+    fetch('/servicios/'+_insumoServiceId+'/insumos/agregar-nuevo',{
+      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:'nombre='+encodeURIComponent(nombre)+'&precio_compra='+pCompra+'&stock='+stock+'&cantidad='+cant
+    }).then(function(r){if(r.ok) location.reload(); else return r.text().then(function(t){alert('Error: '+t)})})
+     .catch(function(e){alert('Error: '+e.message)});
+  }
+}
+
+function eliminarInsumo(sid,pid){
+  if(!confirm('Eliminar este insumo?'))return;
+  fetch('/servicios/'+sid+'/insumos/eliminar',{
+    method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'producto_id='+pid
+  }).then(function(r){if(r.ok) location.reload(); else return r.text().then(function(t){alert('Error: '+t)})})
+   .catch(function(e){alert('Error: '+e.message)});
+}
+
+function editarCantidad(sid,pid){
+  document.getElementById('cantDisplay'+sid+'_'+pid).style.display='none';
+  var inp=document.getElementById('cantInput'+sid+'_'+pid);
+  inp.style.display='inline-block'; inp.focus(); inp.select();
+}
+
+function guardarCantidad(sid,pid){
+  var inp=document.getElementById('cantInput'+sid+'_'+pid);
+  var val=parseInt(inp.value);
+  if(!val||val<1){val=1;inp.value=1}
+  fetch('/servicios/'+sid+'/insumos/actualizar-cantidad',{
+    method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'producto_id='+pid+'&cantidad='+val
+  }).then(function(r){
+    if(r.ok){
+      document.getElementById('cantDisplay'+sid+'_'+pid).textContent=val;
+      document.getElementById('cantDisplay'+sid+'_'+pid).style.display='inline';
+      inp.style.display='none';
+    }
+  }).catch(function(e){console.error(e)});
+}
+
+function filtrarServicios(){
+  var q=document.getElementById('searchServicio').value.toLowerCase().trim();
+  document.querySelectorAll('.fila-servicio').forEach(function(tr){
+    tr.style.display=q===''||tr.getAttribute('data-search').includes(q)?'':'none';
+  });
+}
+
+function cerrarModal(id){document.getElementById(id).classList.remove('active')}
+</script>
+{% endblock %}

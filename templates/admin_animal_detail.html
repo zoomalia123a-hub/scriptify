@@ -1,0 +1,125 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div class="card">
+<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
+  {% if a.foto %}<img src="/photos/{{ a.foto }}" style="width:80px;height:80px;border-radius:50%;object-fit:cover">{% endif %}
+  <div>
+    <h2 style="margin:0 0 4px">{{ a.nombre }}</h2>
+    <span class="badge badge-info">{{ a.especie }}</span>
+    <span class="badge badge-success">{{ a.raza or '-' }}</span>
+  </div>
+</div>
+<div class="form-row-3" style="margin-bottom:16px">
+  <div><strong>Edad:</strong> {{ a.edad }} a&ntilde;os</div>
+  <div><strong>Peso:</strong> {% if ultimo_peso %}{{ ultimo_peso.peso }} kg ({{ ultimo_peso.fecha }}){% elif a.peso is not none and a.peso>0 %}{{ a.peso }} kg{% else %}-{% endif %}</div>
+  <div><strong>Sexo:</strong> {{ a.sexo or '-' }}</div>
+  <div><strong>Color:</strong> {{ a.color or '-' }}</div>
+  <div><strong>Due&ntilde;o:</strong> {{ a.dueno_nombre }} <a href="/duenos/{{ a.id_dueno }}" style="font-size:11px;color:var(--primary)">(ver perfil)</a></div>
+  <div><strong>Tel&eacute;fono:</strong> {{ a.dueno_telefono or '-' }}</div>
+</div>
+{% if hermanos %}
+<div style="padding:8px 12px;background:var(--bg);border-radius:8px;margin-top:8px">
+  <span style="font-size:11px;color:var(--text-light)"><i class="fas fa-paw"></i> Otras mascotas de {{ a.dueno_nombre }} ({{ hermanos|length }})</span>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+    {% for h in hermanos %}
+    <a href="/animales/{{ h.id }}" style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:var(--white);border-radius:6px;font-size:11px;text-decoration:none;color:var(--text);border:1px solid #e0e0e0">
+      {% if h.foto %}<img src="/photos/{{ h.foto }}" style="width:18px;height:18px;border-radius:50%;object-fit:cover">{% else %}<i class="fas fa-paw" style="font-size:10px;color:var(--text-light)"></i>{% endif %}
+      {{ h.nombre }}
+      <span style="color:var(--text-light)">{{ h.especie or '' }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+<div style="display:flex;gap:6px;flex-wrap:wrap">
+  <a href="/animales/{{ a.id }}/historial" class="btn btn-primary"><i class="fas fa-notes-medical"></i> Historial</a>
+  <button class="btn btn-warning" onclick="abrirModalEditarPaciente()"><i class="fas fa-edit"></i> Editar</button>
+  <a href="/subir_foto/{{ a.id }}" class="btn btn-info"><i class="fas fa-camera"></i> Foto</a>
+  <a href="/animales/{{ a.id }}/documentos" class="btn btn-secondary"><i class="fas fa-file"></i> Docs</a>
+  <a href="/ficha/{{ a.id }}" class="btn btn-success" target="_blank"><i class="fas fa-print"></i> Ficha</a>
+</div>
+</div>
+
+<div class="card">
+<h2>Historial M&eacute;dico</h2>
+{% if historial %}
+<table><thead><tr><th>Fecha</th><th>Doctor</th><th>Diagn&oacute;stico</th><th>Tratamiento</th><th>Pr&oacute;ximo Control</th><th>Acciones</th></tr></thead><tbody>
+{% for r in historial %}<tr>
+  <td>{{ r.fecha }}</td><td>{{ r.doctor or '-' }}</td><td>{{ r.diagnostico or '-' }}</td><td>{{ r.tratamiento or '-' }}</td><td>{{ r.proximo_control or '-' }}</td>
+  <td>
+    <a href="/receta/{{ r.id }}" class="btn btn-sm btn-success" target="_blank" title="Receta"><i class="fas fa-prescription"></i></a>
+    <a href="/registros/{{ r.id }}/editar" class="btn btn-sm btn-primary" title="Editar"><i class="fas fa-edit"></i></a>
+    <a href="/registros/{{ r.id }}/eliminar" class="btn btn-sm btn-danger" onclick="return confirmDelete()" title="Eliminar"><i class="fas fa-trash"></i></a>
+  </td>
+</tr>{% endfor %}
+</tbody></table>
+{% else %}<div class="empty">Sin registros m&eacute;dicos</div>{% endif %}
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<div class="card">
+  <h2><i class="fas fa-weight" style="color:var(--info)"></i> Evoluci&oacute;n de Peso</h2>
+  <canvas id="pesoChart" height="200"></canvas>
+  <div id="pesoEmpty" class="empty" style="display:none">Sin datos de peso</div>
+</div>
+<div class="card">
+  <h2><i class="fas fa-stethoscope" style="color:var(--warning)"></i> Diagn&oacute;sticos Recurrentes</h2>
+  <div id="diagList"></div>
+  <div id="diagEmpty" class="empty" style="display:none">Sin diagn&oacute;sticos</div>
+</div>
+</div>
+
+<div class="modal-overlay" id="modalEditarPaciente">
+  <div class="modal">
+    <h2>Editar Paciente</h2>
+    <form method="POST" action="/animales/{{ a.id }}/editar">
+      <div class="form-row">
+        <div class="form-group"><label>Nombre *</label><input type="text" name="nombre" value="{{ a.nombre }}" required></div>
+        <div class="form-group"><label>Especie</label><input type="text" name="especie" value="{{ a.especie or '' }}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Raza</label><input type="text" name="raza" value="{{ a.raza or '' }}"></div>
+        <div class="form-group"><label>Edad</label><input type="number" name="edad" value="{{ a.edad or 0 }}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Peso (kg)</label><input type="number" step="0.1" name="peso" value="{{ a.peso or 0 }}"></div>
+        <div class="form-group"><label>Sexo</label><select name="sexo"><option value="">--</option><option value="Macho" {% if a.sexo=='Macho' %}selected{% endif %}>Macho</option><option value="Hembra" {% if a.sexo=='Hembra' %}selected{% endif %}>Hembra</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Color</label><input type="text" name="color" value="{{ a.color or '' }}"></div>
+        <div class="form-group"><label>Due&ntilde;o *</label>
+          <input id="duenoEditSearch" list="duenoEditList" placeholder="Escribe para buscar..." style="width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px" oninput="seleccionarDuenoEdit(this.value)" autocomplete="off" value="{{ a.dueno_nombre }}">
+          <datalist id="duenoEditList">{% for d in duenos %}<option value="{{ d.nombre }}" data-id="{{ d.id }}">{% endfor %}</datalist>
+          <input type="hidden" name="id_dueno" id="idDuenoEditHidden" value="{{ a.id_dueno }}" required>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button type="submit" class="btn btn-success" style="flex:1">Guardar</button>
+        <button type="button" class="btn btn-secondary" style="flex:1" onclick="cerrarModal('modalEditarPaciente')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+var duenosEdit = { {% for d in duenos %}"{{ d.nombre }}":"{{ d.id }}"{% if not loop.last %},{% endif %}{% endfor %} };
+function seleccionarDuenoEdit(val){
+  if(duenosEdit[val]){document.getElementById('idDuenoEditHidden').value=duenosEdit[val]}
+  else{document.getElementById('idDuenoEditHidden').value=''}
+}
+function abrirModalEditarPaciente(){document.getElementById('modalEditarPaciente').classList.add('active')}
+function cerrarModal(id){document.getElementById(id).classList.remove('active')}
+document.querySelectorAll('.modal-overlay').forEach(function(el){el.addEventListener('click',function(e){if(e.target===this)this.classList.remove('active')})});
+fetch('/api/peso/{{ a.id }}').then(r=>r.json()).then(data=>{
+  if(!data.length){document.getElementById('pesoEmpty').style.display='block';return}
+  new Chart(document.getElementById('pesoChart'),{type:'line',data:{labels:data.map(d=>d.fecha),datasets:[{label:'Peso (kg)',data:data.map(d=>d.peso),borderColor:'#3498db',backgroundColor:'rgba(52,152,219,.1)',fill:true,tension:.3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:false}}}});
+});
+fetch('/api/diagnosticos/{{ a.id }}').then(r=>r.json()).then(data=>{
+  if(!data.length){document.getElementById('diagEmpty').style.display='block';return}
+  var html='<table><thead><tr><th>Diagn&oacute;stico</th><th>Veces</th></tr></thead><tbody>';
+  data.forEach(function(d){html+='<tr><td>'+d.diagnostico+'</td><td><span class="badge badge-info">'+d.count+'</span></td></tr>'});
+  html+='</tbody></table>';document.getElementById('diagList').innerHTML=html;
+});
+</script>
+{% endblock %}

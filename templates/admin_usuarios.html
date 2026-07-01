@@ -1,0 +1,77 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+  <div><span style="color:var(--text-light);font-size:13px">{{ items|length }} usuario(s)</span></div>
+  <button class="btn btn-primary" onclick="abrirModalUsuario()"><i class="fas fa-plus"></i> Nuevo Usuario</button>
+</div>
+
+<form method="GET" style="display:flex;gap:8px;margin-bottom:12px;padding:12px;background:var(--bg);border-radius:8px">
+  <input type="text" id="searchUsuario" placeholder="Buscar por usuario, nombre o rol..." style="flex:1;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px" autocomplete="off">
+  <button type="button" class="btn btn-primary btn-sm" onclick="filtrarUsuarios()"><i class="fas fa-search"></i></button>
+  <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('searchUsuario').value='';filtrarUsuarios()"><i class="fas fa-times"></i></button>
+</form>
+
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr><th>ID</th><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Activo</th><th>Acciones</th></tr></thead>
+  <tbody id="usuarioTableBody">{% for u in items %}<tr data-search="{{ u.username|lower }} {{ u.nombre|lower }} {{ u.rol|lower }}">
+    <td>{{ u.id }}</td><td>{{ u.username }}</td><td>{{ u.nombre }}</td>
+    <td><span class="badge {% if u.rol=='admin' %}badge-danger{% else %}badge-info{% endif %}">{{ u.rol }}</span></td>
+    <td>{% if u.activo %}<span class="badge badge-success">S&iacute;</span>{% else %}<span class="badge badge-danger">No</span>{% endif %}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-sm btn-primary" onclick="abrirModalUsuario({{ u.id }},{{ u.username|tojson }},{{ u.nombre|tojson }},{{ u.rol|tojson }},{{ u.activo }})"><i class="fas fa-edit"></i></button>
+      <a href="/usuarios/{{ u.id }}/eliminar" class="btn btn-sm btn-danger" onclick="return confirmDelete()"><i class="fas fa-trash"></i></a>
+    </td>
+  </tr>{% else %}<tr><td colspan="6"><div class="empty">No hay usuarios</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+
+<div class="modal-overlay" id="modalUsuario" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal" style="max-width:420px">
+    <h2 id="modalUsuarioTitle">Nuevo Usuario</h2>
+    <form method="POST" id="formUsuario">
+      <div class="form-group"><label>Usuario *</label><input type="text" name="username" id="usr_username" required></div>
+      <div class="form-group"><label>Contrase&ntilde;a {% if not edit %}<span style="color:var(--text-light);font-size:11px">(dejar en blanco para mantener)</span>{% endif %}*</label><input type="password" name="password" id="usr_password" {{ 'required' if not edit else '' }}></div>
+      <div class="form-group"><label>Nombre *</label><input type="text" name="nombre" id="usr_nombre" required></div>
+      <div class="form-group"><label>Rol</label>
+        <select name="rol" id="usr_rol">
+          <option value="empleado">Empleado</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div class="form-group" id="usr_activo_group" style="display:none">
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" name="activo" id="usr_activo" value="1" checked style="width:18px;height:18px;cursor:pointer">
+          <input type="hidden" name="activo" value="0">
+          <label for="usr_activo" style="font-size:13px;color:var(--text-light);cursor:pointer">Usuario activo</label>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-success">Guardar</button><button type="button" class="btn btn-secondary" onclick="document.getElementById('modalUsuario').classList.remove('active')">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+<script>
+function abrirModalUsuario(id,username,nombre,rol,activo){
+  var edit=!!id;
+  document.getElementById('modalUsuarioTitle').textContent=edit?'Editar Usuario':'Nuevo Usuario';
+  document.getElementById('formUsuario').action=edit?'/usuarios/'+id+'/editar':'/usuarios/nuevo';
+  document.getElementById('usr_username').value=username||'';
+  document.getElementById('usr_password').value='';
+  document.getElementById('usr_password').required=!edit;
+  document.getElementById('usr_password').placeholder=edit?'Dejar en blanco para mantener':'';
+  document.getElementById('usr_nombre').value=nombre||'';
+  document.getElementById('usr_rol').value=rol||'empleado';
+  document.getElementById('usr_activo_group').style.display=edit?'block':'none';
+  document.getElementById('usr_activo').checked=edit?!!activo:true;
+  document.getElementById('modalUsuario').classList.add('active');
+}
+function filtrarUsuarios(){
+  var q=document.getElementById('searchUsuario').value.toLowerCase().trim();
+  document.querySelectorAll('#usuarioTableBody tr').forEach(function(tr){
+    tr.style.display=(!q||tr.getAttribute('data-search').includes(q))?'':'none';
+  });
+}
+document.getElementById('searchUsuario').addEventListener('input',filtrarUsuarios);
+</script>
+{% endblock %}

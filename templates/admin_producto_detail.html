@@ -1,0 +1,70 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+  <div>
+    <h2 style="margin:0"><i class="fas fa-box" style="color:var(--primary)"></i> {{ item.nombre }}</h2>
+    <div style="color:var(--text-light);font-size:13px;margin-top:4px">ID: {{ item.id }} {% if item.categoria %}| {{ item.categoria }}{% endif %}</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <a href="/productos/{{ item.id }}/editar" class="btn btn-primary"><i class="fas fa-edit"></i> Editar</a>
+    <a href="/productos" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Volver</a>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+  <div class="card">
+    <h2><i class="fas fa-info-circle"></i> Informaci&oacute;n</h2>
+    {% if item.foto %}<div style="text-align:center;margin-bottom:16px;background:transparent;padding:0"><img src="/productos_photos/{{ item.foto }}" style="max-width:100%;max-height:400px;object-fit:scale-down;mix-blend-mode:multiply;display:block;margin:0 auto"></div>{% endif %}
+    <table style="width:100%">
+      <tr><td style="padding:6px 0;font-size:13px;color:var(--text-light);width:120px">Descripci&oacute;n</td><td style="padding:6px 0;font-size:14px">{{ item.descripcion or '-' }}</td></tr>
+      <tr><td style="padding:6px 0;font-size:13px;color:var(--text-light)">Categor&iacute;a</td><td style="padding:6px 0;font-size:14px">{{ item.categoria or '-' }}</td></tr>
+      <tr><td style="padding:6px 0;font-size:13px;color:var(--text-light)">SKU / C&oacute;digo</td><td style="padding:6px 0;font-size:14px;font-family:monospace">{{ item.codigo_barras or '-' }}</td></tr>
+      <tr><td style="padding:6px 0;font-size:13px;color:var(--text-light)">Stock actual</td><td style="padding:6px 0;font-size:14px;font-weight:700"><span class="badge {% if item.stock_minimo and item.stock<=item.stock_minimo %}badge-danger{% elif item.stock<=10 %}badge-warning{% else %}badge-success{% endif %}" style="font-size:14px;padding:4px 12px">{{ item.stock }}</span></td></tr>
+      <tr><td style="padding:6px 0;font-size:13px;color:var(--text-light)">Stock m&iacute;nimo</td><td style="padding:6px 0;font-size:14px">{{ item.stock_minimo or 5 }}</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h2><i class="fas fa-chart-line"></i> Precios</h2>
+    <table style="width:100%">
+      <tr><td style="padding:6px 0;font-size:13px;color:var(--text-light);width:120px">Precio compra</td><td style="padding:6px 0;font-size:14px;font-weight:600">S/ {{ "%.2f"|format(item.precio_compra|float) }}</td></tr>
+      <tr><td style="padding:6px 0;font-size:13px;color:var(--text-light)">Precio venta</td><td style="padding:6px 0;font-size:14px;font-weight:600">S/ {{ "%.2f"|format(item.precio_venta|float) }}</td></tr>
+      <tr><td style="padding:6px 0;font-size:13px;color:var(--text-light)">Ganancia</td><td style="padding:6px 0;font-size:14px;font-weight:700;{% if (item.precio_venta-item.precio_compra)>0 %}color:#27ae60{% elif (item.precio_venta-item.precio_compra)<0 %}color:#e74c3c{% endif %}">S/ {{ "%.2f"|format((item.precio_venta|float - item.precio_compra|float)) }}</td></tr>
+      {% if item.por_mayor %}<tr><td style="padding:6px 0;font-size:13px;color:var(--text-light)">Venta por Mayor</td><td style="padding:6px 0;font-size:14px;font-weight:600"><span class="badge badge-info" style="font-size:13px">S/ {{ "%.2f"|format(item.precio_venta|float * (1 - item.descuento_mayorista|float/100)) }} ({{ item.descuento_mayorista|int }}% descuento)</span></td></tr>{% endif %}
+      {% if item.vende_por_kilo and item.precio_kilo|float>0 %}<tr><td style="padding:6px 0;font-size:13px;color:var(--text-light)">Venta por Kilo</td><td style="padding:6px 0;font-size:14px;font-weight:600">S/ {{ "%.2f"|format(item.precio_kilo|float) }} /kg</td></tr>{% endif %}
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2><i class="fas fa-shopping-cart"></i> Historial de Ventas ({{ total_vendido }} unidades vendidas)</h2>
+  {% if ventas %}
+  <table>
+    <thead><tr><th>Venta ID</th><th>Fecha</th><th>Cantidad</th><th>Precio Unit.</th><th>Subtotal</th></tr></thead>
+    <tbody>{% for v in ventas %}<tr>
+      <td><a href="/ventas/{{ v.venta_id }}" style="color:var(--primary);text-decoration:none">#{{ v.venta_id }}</a></td>
+      <td>{{ v.fecha }}</td>
+      <td>{{ v.cantidad }}</td>
+      <td>S/ {{ "%.2f"|format(v.precio_unitario|float) }}</td>
+      <td>S/ {{ "%.2f"|format((v.cantidad*v.precio_unitario)|float) }}</td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty">No se ha vendido este producto</div>{% endif %}
+</div>
+
+<div class="card">
+  <h2><i class="fas fa-history"></i> Movimientos de Stock</h2>
+  {% if movimientos %}
+  <table>
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Cantidad</th><th>Stock Anterior</th><th>Stock Nuevo</th><th>Referencia</th></tr></thead>
+    <tbody>{% for m in movimientos %}<tr>
+      <td style="font-size:12px">{{ m.fecha }}</td>
+      <td><span class="badge {% if m.tipo=='entrada' or m.tipo=='inicial' %}badge-success{% elif m.tipo=='salida' %}badge-danger{% else %}badge-info{% endif %}">{{ m.tipo|capitalize }}</span></td>
+      <td style="font-weight:600">{{ m.cantidad }}</td>
+      <td>{{ m.stock_anterior }}</td>
+      <td>{{ m.stock_nuevo }}</td>
+      <td style="font-size:12px;color:var(--text-light)">{{ m.descripcion or '' }}</td>
+    </tr>{% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty">No hay movimientos registrados</div>{% endif %}
+</div>
+{% endblock %}

@@ -1,10 +1,28 @@
-__pycache__/
+
+# Logs
+# Temp scripts
+# Uploaded media
+*.log
 *.pyc
 *.pyo
-veterinaria.db
-backups/
-.web_secret
 .env
-env/
-venv/
 .venv/
+.web_secret
+__pycache__/
+backups/
+check_*.py
+cleanup_*.py
+comprobantes/
+config.json
+env/
+examenes/
+find_*.py
+fix_*.py
+fotos/
+nohup.out
+photos/
+productos_photos/
+read_*.py
+test_*.py
+venv/
+veterinaria.db

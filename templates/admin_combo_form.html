@@ -1,0 +1,106 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<style>
+.add-item-row{display:flex;gap:8px;margin-bottom:8px}
+.add-item-row select,.add-item-row input{flex:1;padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px}
+.add-item-row input[type=number]{width:80px;flex:none}
+</style>
+
+<div class="card" style="max-width:800px">
+<form method="POST">
+  <div class="form-row">
+    <div class="form-group"><label>Nombre *</label><input type="text" name="nombre" value="{{ item.nombre if item else '' }}" required></div>
+    <div class="form-group"><label>Descripci&oacute;n</label><input type="text" name="descripcion" value="{{ item.descripcion if item else '' }}"></div>
+  </div>
+
+  <h3 style="font-size:14px;margin:16px 0 8px;color:var(--text)"><i class="fas fa-list"></i> Items del Combo</h3>
+  <div id="itemsContainer">
+    {% if item and item.combo_items %}
+    {% for it in item.combo_items %}
+    <div class="add-item-row item-row">
+      <select name="tipo_item" style="flex:0.4">
+        <option value="producto" {% if it.tipo_item=='producto' %}selected{% endif %}>Producto</option>
+        <option value="servicio_medico" {% if it.tipo_item=='servicio_medico' %}selected{% endif %}>Servicio M&eacute;d.</option>
+        <option value="servicio_grooming" {% if it.tipo_item=='servicio_grooming' %}selected{% endif %}>Grooming</option>
+      </select>
+      <select name="referencia_id">
+        <option value="">-- Seleccionar --</option>
+        <optgroup label="Productos">{% for p in productos %}<option value="{{ p.id }}" data-precio="{{ p.precio_venta }}" {% if it.referencia_id==p.id and it.tipo_item=='producto' %}selected{% endif %}>{{ p.nombre }} - S/ {{ "%.2f"|format(p.precio_venta|float) }}</option>{% endfor %}</optgroup>
+        <optgroup label="Servicios M&eacute;dicos">{% for s in servicios_med %}<option value="{{ s.id }}" data-precio="{{ s.precio }}" {% if it.referencia_id==s.id and it.tipo_item=='servicio_medico' %}selected{% endif %}>{{ s.nombre }} - S/ {{ "%.2f"|format(s.precio|float) }}</option>{% endfor %}</optgroup>
+        <optgroup label="Servicios Grooming">{% for s in servicios_groom %}<option value="{{ s.id }}" data-precio="{{ s.precio }}" {% if it.referencia_id==s.id and it.tipo_item=='servicio_grooming' %}selected{% endif %}>{{ s.nombre }} - S/ {{ "%.2f"|format(s.precio|float) }}</option>{% endfor %}</optgroup>
+      </select>
+      <input type="hidden" name="nombre_item" value="{{ it.nombre }}">
+      <input type="number" name="cantidad_item" value="{{ it.cantidad }}" min="1" style="width:60px">
+      <input type="number" name="precio_item" value="{{ "%.2f"|format(it.precio_unitario|float) }}" step="0.01" style="width:100px" placeholder="Precio">
+      <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.item-row').remove()"><i class="fas fa-times"></i></button>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="add-item-row item-row">
+      <select name="tipo_item" style="flex:0.4">
+        <option value="producto">Producto</option>
+        <option value="servicio_medico">Servicio M&eacute;d.</option>
+        <option value="servicio_grooming">Grooming</option>
+      </select>
+      <select name="referencia_id">
+        <option value="">-- Seleccionar --</option>
+        <optgroup label="Productos">{% for p in productos %}<option value="{{ p.id }}" data-precio="{{ p.precio_venta }}">{{ p.nombre }} - S/ {{ "%.2f"|format(p.precio_venta|float) }}</option>{% endfor %}</optgroup>
+        <optgroup label="Servicios M&eacute;dicos">{% for s in servicios_med %}<option value="{{ s.id }}" data-precio="{{ s.precio }}">{{ s.nombre }} - S/ {{ "%.2f"|format(s.precio|float) }}</option>{% endfor %}</optgroup>
+        <optgroup label="Servicios Grooming">{% for s in servicios_groom %}<option value="{{ s.id }}" data-precio="{{ s.precio }}">{{ s.nombre }} - S/ {{ "%.2f"|format(s.precio|float) }}</option>{% endfor %}</optgroup>
+      </select>
+      <input type="hidden" name="nombre_item" value="">
+      <input type="number" name="cantidad_item" value="1" min="1" style="width:60px">
+      <input type="number" name="precio_item" value="0" step="0.01" style="width:100px" placeholder="Precio">
+    </div>
+    {% endif %}
+  </div>
+  <button type="button" class="btn btn-sm btn-secondary" onclick="agregarFila()" style="margin-bottom:16px"><i class="fas fa-plus"></i> Agregar Item</button>
+
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> {{ 'Guardar Cambios' if item else 'Guardar Combo' }}</button>
+    <a href="/combos" class="btn btn-secondary">Cancelar</a>
+  </div>
+</form>
+</div>
+
+<script>
+var rowCount=1;
+function agregarFila(){
+  var c=document.getElementById('itemsContainer');
+  var original=c.querySelector('.item-row');
+  var clone=original.cloneNode(true);
+  clone.querySelectorAll('select,input').forEach(function(el){
+    if(el.name) el.name=el.name.replace(/_\d+$/, '_'+rowCount);
+  });
+  clone.querySelectorAll('[name^="cantidad_item"],[name^="precio_item"]').forEach(function(el){el.value=el.name.includes('cantidad')?'1':'0'});
+  clone.querySelector('[name^="nombre_item"]').value='';
+  var sel=clone.querySelector('[name^="referencia_id"]');
+  if(sel) sel.selectedIndex=0;
+  c.appendChild(clone); rowCount++;
+  actualizarPrecios();
+}
+document.addEventListener('change',function(e){
+  if(e.target.matches('[name^="referencia_id"],[name^="tipo_item"]')){
+    actualizarPrecioInput(e.target);
+  }
+});
+function actualizarPrecioInput(el){
+  var row=el.closest('.item-row');
+  var sel=row.querySelector('[name^="referencia_id"]');
+  var opt=sel.options[sel.selectedIndex];
+  var precioInput=row.querySelector('[name^="precio_item"]');
+  var nombreInput=row.querySelector('[name^="nombre_item"]');
+  if(opt&&opt.value){
+    precioInput.value=parseFloat(opt.getAttribute('data-precio')||0).toFixed(2);
+    nombreInput.value=opt.textContent.split(' - ')[0].trim();
+  }
+}
+function actualizarPrecios(){
+  document.querySelectorAll('.item-row').forEach(function(row){
+    var sel=row.querySelector('[name^="referencia_id"]');
+    if(sel) actualizarPrecioInput(sel);
+  });
+}
+actualizarPrecios();
+</script>
+{% endblock %}

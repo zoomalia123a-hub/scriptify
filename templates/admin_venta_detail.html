@@ -12,7 +12,7 @@
   <div><strong>Cliente ID:</strong> {{ v.id_cliente or '-' }}</div>
   <div><strong>DNI/RUC:</strong> {{ v.cliente_dni or '-' }}</div>
   <div><strong>Cliente:</strong> {{ v.cliente_nombre or '-' }}</div>
-  <div><strong>Comprobante:</strong> {{ v.tipo_comprobante or 'Boleta' }} - {{ v.serie or 'B001' }}-{{ '%05d'|format(v.numero|int) }}</div>
+  <div><strong>Comprobante:</strong> {{ v.tipo_comprobante or 'Boleta' }} - {{ v.serie or 'B001' }}-{{ '%05d'|format(v.numero|int) }}<br><small style="color:{% if v.sunat_estado and 'error' in v.sunat_estado %}#e74c3c{% elif v.sunat_estado %}#27ae60{% else %}#999{% endif %}">{{ v.sunat_estado or 'No enviado' }}</small>{% if v.sunat_ticket %}<br><small style="color:#999">Ticket: {{ v.sunat_ticket[:20] }}</small>{% endif %}</div>
   <div><strong>M&eacute;todo Pago:</strong> {{ v.metodo_pago or 'efectivo' }}</div>
   {% if is_credit %}<div><strong>Saldo:</strong> <span style="color:#e74c3c;font-weight:700">S/ {{ "%.2f"|format(saldo) }}</span></div>{% endif %}
 </div>
@@ -43,42 +43,6 @@
 </tr>{% else %}<tr><td colspan="5"><div class="empty">Sin items</div></td></tr>{% endfor %}
 </tbody></table>
 </div>
-
-{% if v.sunat_estado is defined %}
-<div class="card">
-<h2><i class="fas fa-file-invoice"></i> Comprobante Electronico</h2>
-<div class="form-row-3" style="margin-bottom:12px">
-  <div><strong>Estado SUNAT:</strong>
-    <span class="badge {% if v.sunat_estado=='aceptado' %}badge-success{% elif v.sunat_estado=='pendiente' %}badge-warning{% elif v.sunat_estado=='rechazado' %}badge-danger{% else %}badge-secondary{% endif %}">
-      {{ v.sunat_estado or 'No emitido' }}
-    </span>
-  </div>
-  {% if v.sunat_ticket %}
-  <div><strong>Ticket:</strong> {{ v.sunat_ticket }}</div>
-  {% endif %}
-  {% if v.sunat_fecha_envio %}
-  <div><strong>Enviado:</strong> {{ v.sunat_fecha_envio }}</div>
-  {% endif %}
-</div>
-<div style="display:flex;gap:8px;flex-wrap:wrap">
-  {% if v.estado == 'completada' and (not v.sunat_estado or v.sunat_estado == 'pendiente' or v.sunat_estado == 'rechazado') %}
-  <form method="POST" action="/ventas/{{ v.id }}/emitir-sunat" style="display:inline">
-    <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> 
-      {% if v.sunat_estado == 'pendiente' %}Reenviar{% else %}Emitir Comprobante{% endif %}
-    </button>
-  </form>
-  {% endif %}
-  {% if v.sunat_ticket and v.sunat_estado != 'aceptado' %}
-  <form method="POST" action="/ventas/{{ v.id }}/check-sunat" style="display:inline">
-    <button type="submit" class="btn btn-info"><i class="fas fa-sync"></i> Consultar Estado</button>
-  </form>
-  {% endif %}
-  {% if v.sunat_cdr_xml %}
-  <a href="/sunat/cdr/{{ v.id }}" class="btn btn-secondary" target="_blank"><i class="fas fa-file-code"></i> Descargar CDR</a>
-  {% endif %}
-</div>
-</div>
-{% endif %}
 
 {% if pagos is defined and pagos|length > 0 %}
 <div class="card">

@@ -1,0 +1,39 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div class="card" style="max-width:700px">
+<form method="POST">
+<div class="form-row">
+  <div class="form-group"><label>Nombre *</label><input type="text" name="nombre" value="{{ item.nombre if item else '' }}" required></div>
+  <div class="form-group"><label>Especie</label><input type="text" name="especie" value="{{ item.especie if item else '' }}" placeholder="Perro, Gato..."></div>
+</div>
+<div class="form-row">
+  <div class="form-group"><label>Raza</label><input type="text" name="raza" value="{{ item.raza if item else '' }}"></div>
+  <div class="form-group"><label>Edad (a&ntilde;os)</label><input type="number" name="edad" value="{{ item.edad if item else 0 }}"></div>
+</div>
+<div class="form-row">
+  <div class="form-group"><label>Peso (kg)</label><input type="number" step="0.1" name="peso" value="{{ item.peso if item else 0 }}"></div>
+  <div class="form-group"><label>Sexo</label><select name="sexo"><option value="">--</option><option value="Macho" {{ 'selected' if item and item.sexo=='Macho' else '' }}>Macho</option><option value="Hembra" {{ 'selected' if item and item.sexo=='Hembra' else '' }}>Hembra</option></select></div>
+</div>
+<div class="form-row">
+  <div class="form-group"><label>Color</label><input type="text" name="color" value="{{ item.color if item else '' }}"></div>
+  <div class="form-group"><label>Due&ntilde;o *</label>
+    <input id="duenoSearch" list="duenoList" placeholder="Escribe para buscar..." style="width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px" oninput="seleccionarDueno(this.value)" autocomplete="off" value="{{ item.dueno_nombre if item else '' }}">
+    <datalist id="duenoList">{% for d in duenos %}<option value="{{ d.nombre }}" data-id="{{ d.id }}">{% endfor %}</datalist>
+    <input type="hidden" name="id_dueno" id="idDuenoHidden" value="{{ item.id_dueno if item else '' }}" required>
+    <div style="font-size:11px;color:var(--text-light);margin-top:2px">Selecciona el due&ntilde;o de la lista o <a href="/duenos" target="_blank">crea uno nuevo</a></div>
+  </div>
+<script>
+var duenosMap = { {% for d in duenos %}"{{ d.nombre }}":"{{ d.id }}"{% if not loop.last %},{% endif %}{% endfor %} };
+function seleccionarDueno(val){
+  if(duenosMap[val]){document.getElementById('idDuenoHidden').value=duenosMap[val]}
+  else{document.getElementById('idDuenoHidden').value=''}
+}
+</script>
+</div>
+<div style="display:flex;gap:8px;margin-top:8px">
+  <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Guardar</button>
+  <a href="/historial" class="btn btn-secondary">Cancelar</a>
+</div>
+</form>
+</div>
+{% endblock %}

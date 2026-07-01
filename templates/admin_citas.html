@@ -1,0 +1,170 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<style>
+@media(max-width:600px){
+  .cita-filters{flex-direction:column}
+  .cita-actions{flex-wrap:wrap}
+}
+tr.today td{background:#fffde7!important;font-weight:600}
+body.dark tr.today td{background:#3d3520!important}
+</style>
+
+<form method="GET" action="/citas" class="cita-filters" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;padding:12px;background:var(--bg);border-radius:8px">
+  <input type="text" name="q" placeholder="Buscar paciente, due&ntilde;o, motivo..." value="{{ q or '' }}" style="flex:1;min-width:160px;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px" autocomplete="off">
+  <input type="date" name="desde" value="{{ desde or '' }}" style="padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px" title="Desde">
+  <input type="date" name="hasta" value="{{ hasta or '' }}" style="padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px" title="Hasta">
+  <button type="submit" class="btn btn-primary btn-sm" style="padding:8px 14px"><i class="fas fa-search"></i></button>
+  <a href="/citas" class="btn btn-secondary btn-sm" style="padding:8px 14px;text-decoration:none"><i class="fas fa-times"></i></a>
+</form>
+
+<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+  <a href="/citas{% if q %}?q={{ q }}{% endif %}" class="btn btn-sm {% if not estado_f and not request.args.get('hoy') %}btn-primary{% else %}btn-secondary{% endif %}" style="text-decoration:none">Todas</a>
+  <a href="/citas?hoy=1{% if q %}&q={{ q }}{% endif %}" class="btn btn-sm {% if request.args.get('hoy') %}btn-primary{% else %}btn-secondary{% endif %}" style="text-decoration:none"><i class="fas fa-calendar-day"></i> Hoy</a>
+  <a href="/citas?estado=pendiente{% if q %}&q={{ q }}{% endif %}" class="btn btn-sm {% if estado_f=='pendiente' %}btn-primary{% else %}btn-secondary{% endif %}" style="text-decoration:none"><i class="fas fa-clock"></i> Pendientes</a>
+  <a href="/citas?estado=completada{% if q %}&q={{ q }}{% endif %}" class="btn btn-sm {% if estado_f=='completada' %}btn-primary{% else %}btn-secondary{% endif %}" style="text-decoration:none"><i class="fas fa-check-circle"></i> Completadas</a>
+  <a href="/citas?estado=cancelada{% if q %}&q={{ q }}{% endif %}" class="btn btn-sm {% if estado_f=='cancelada' %}btn-primary{% else %}btn-secondary{% endif %}" style="text-decoration:none"><i class="fas fa-times-circle"></i> Canceladas</a>
+</div>
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+  <div><span style="color:var(--text-light);font-size:13px">{{ total }} cita(s) &middot; P&aacute;gina {{ page }} de {{ total_pages }}</span></div>
+  <button class="btn btn-primary" onclick="abrirModalCita()"><i class="fas fa-plus"></i> Nueva Cita</button>
+</div>
+
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr><th>ID</th><th>Paciente</th><th>Due&ntilde;o</th><th>Fecha</th><th>Hora</th><th>Motivo</th><th>Tipo</th><th>Estado</th><th>Acciones</th></tr></thead>
+  <tbody>{% for c in citas %}<tr class="{% if c.fecha==hoy_str %}today{% endif %}">
+    <td>{{ c.id }}</td>
+    <td><a href="/animales/{{ c.id_animal }}" style="color:var(--primary);text-decoration:none">{{ c.animal_nombre }}</a></td>
+    <td><a href="/duenos/{{ c.id_dueno }}" style="color:var(--text);text-decoration:none">{{ c.dueno_nombre }}</a></td>
+    <td>{{ c.fecha }}</td>
+    <td>{{ c.hora or '-' }}</td>
+    <td>{{ c.motivo }}</td>
+    <td>{{ c.tipo }}</td>
+    <td><span class="badge {% if c.estado=='pendiente' %}badge-warning{% elif c.estado=='completada' %}badge-success{% else %}badge-danger{% endif %}">{{ c.estado }}</span></td>
+    <td class="cita-actions" style="white-space:nowrap">
+      <button class="btn btn-sm btn-primary" title="Editar" onclick='editarCita({{ c.id }},{{ c.fecha|tojson }},{{ c.hora|tojson }},{{ c.tipo|tojson }},{{ c.motivo|tojson }},{{ c.precio|tojson }})'><i class="fas fa-pen"></i></button>
+      {% if c.estado=='pendiente' %}
+      <a href="/citas/{{ c.id }}/completar" class="btn btn-sm btn-success" title="Completar" onclick="return confirm('Marcar como completada?')"><i class="fas fa-check"></i></a>
+      <a href="/citas/{{ c.id }}/cancelar" class="btn btn-sm btn-danger" title="Cancelar" onclick="return confirm('Cancelar esta cita?')"><i class="fas fa-times"></i></a>
+      {% else %}
+      <span style="color:var(--text-light);font-size:11px">-</span>
+      {% endif %}
+    </td>
+  </tr>{% else %}<tr><td colspan="9"><div class="empty">No hay citas</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+
+{% if total_pages>1 %}
+<div class="pag" style="display:flex;justify-content:center;align-items:center;gap:6px;padding:12px;flex-wrap:wrap">
+  {% if page>1 %}<a href="/citas?page={{ page-1 }}{% if q %}&q={{ q }}{% endif %}{% if estado_f %}&estado={{ estado_f }}{% endif %}{% if request.args.get('hoy') %}&hoy=1{% endif %}{% if desde %}&desde={{ desde }}{% endif %}{% if hasta %}&hasta={{ hasta }}{% endif %}" style="display:inline-block;padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;background:var(--bg);color:var(--text)">&laquo; Anterior</a>{% else %}<span style="color:#ccc">&laquo; Anterior</span>{% endif %}
+  {% for p in range(1,total_pages+1) %}{% if p>=page-2 and p<=page+2 %}<a href="/citas?page={{ p }}{% if q %}&q={{ q }}{% endif %}{% if estado_f %}&estado={{ estado_f }}{% endif %}{% if request.args.get('hoy') %}&hoy=1{% endif %}{% if desde %}&desde={{ desde }}{% endif %}{% if hasta %}&hasta={{ hasta }}{% endif %}" style="display:inline-block;padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;{% if p==page %}background:var(--primary);color:#fff;font-weight:600{% else %}background:var(--bg);color:var(--text){% endif %}">{{ p }}</a>{% endif %}{% endfor %}
+  {% if page<total_pages %}<a href="/citas?page={{ page+1 }}{% if q %}&q={{ q }}{% endif %}{% if estado_f %}&estado={{ estado_f }}{% endif %}{% if request.args.get('hoy') %}&hoy=1{% endif %}{% if desde %}&desde={{ desde }}{% endif %}{% if hasta %}&hasta={{ hasta }}{% endif %}" style="display:inline-block;padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;background:var(--bg);color:var(--text)">Siguiente &raquo;</a>{% else %}<span style="color:#ccc">Siguiente &raquo;</span>{% endif %}
+</div>
+{% endif %}
+
+<div class="modal-overlay" id="modalCita">
+  <div class="modal">
+    <h2>Nueva Cita</h2>
+    <form method="POST" action="/citas/nuevo" id="formNuevaCita">
+      <div class="form-group">
+        <label>Paciente *</label>
+        <input list="animalList" id="animalInput" placeholder="Escriba nombre del paciente..." autocomplete="off" required oninput="actualizarDuenoCitaInput()" style="width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px">
+        <datalist id="animalList">
+          {% for a in animales %}
+          <option value="{{ a.nombre }}" data-id="{{ a.id }}" data-dueno="{{ a.id_dueno }}">{{ a.especie }} - {{ a.dueno_nombre }}</option>
+          {% endfor %}
+        </datalist>
+        <input type="hidden" name="id_animal" id="animalIdHidden" required>
+      </div>
+      <div class="form-group">
+        <label>Due&ntilde;o</label>
+        <input type="text" id="duenoDisplayCita" readonly style="width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;background:#f5f5f5">
+        <input type="hidden" name="id_dueno" id="duenoInputCita">
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Fecha *</label><input type="date" name="fecha" value="{{ hoy }}" required></div>
+        <div class="form-group"><label>Hora</label><input type="time" name="hora"></div>
+        <div class="form-group"><label>Tipo</label><select name="tipo" onchange="autoFillPrecioCita(this.value)"><option value="veterinaria">Veterinaria</option><option value="grooming">Grooming</option><option value="consulta">Consulta</option></select></div>
+      </div>
+      <div class="form-group"><label>Motivo</label><textarea name="motivo" rows="2"></textarea></div>
+      <input type="hidden" name="precio" id="citaPrecioAdmin" value="0">
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button type="submit" class="btn btn-success" style="flex:1"><i class="fas fa-save"></i> Agendar</button>
+        <button type="button" class="btn btn-secondary" style="flex:1" onclick="cerrarModal('modalCita')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalEditarCita">
+  <div class="modal">
+    <h2>Editar Cita</h2>
+    <form method="POST" id="formEditarCita">
+      <div class="form-row">
+        <div class="form-group"><label>Fecha *</label><input type="date" name="fecha" id="editCitaFecha" required></div>
+        <div class="form-group"><label>Hora</label><input type="time" name="hora" id="editCitaHora"></div>
+        <div class="form-group"><label>Tipo</label><select name="tipo" id="editCitaTipo"><option value="veterinaria">Veterinaria</option><option value="grooming">Grooming</option><option value="consulta">Consulta</option></select></div>
+      </div>
+      <div class="form-group"><label>Motivo</label><textarea name="motivo" id="editCitaMotivo" rows="2"></textarea></div>
+      <div class="form-group"><label>Precio (S/)</label><input type="number" step="0.01" name="precio" id="editCitaPrecio" value="0"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button type="submit" class="btn btn-success" style="flex:1"><i class="fas fa-save"></i> Guardar</button>
+        <button type="button" class="btn btn-secondary" style="flex:1" onclick="cerrarModal('modalEditarCita')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+var preciosCita = {{ precios_cita|safe }};
+var animales = [
+  {% for a in animales %}
+  {id:{{ a.id }}, nombre:{{ a.nombre|tojson }}, dueno_id:{{ a.id_dueno }}, dueno_nombre:{{ a.dueno_nombre|tojson }}, especie:{{ a.especie|tojson }}},
+  {% endfor %}
+];
+function autoFillPrecioCita(tipo){
+  var map = {'consulta':'consulta general','veterinaria':'consulta general','grooming':'ba\u00f1o general'};
+  var key = map[tipo] || tipo;
+  var precio = preciosCita[key] || 0;
+  document.getElementById('citaPrecioAdmin').value = precio;
+}
+function actualizarDuenoCitaInput(){
+  var val=document.getElementById('animalInput').value;
+  var hidden=document.getElementById('animalIdHidden');
+  var duenoDisplay=document.getElementById('duenoDisplayCita');
+  var duenoHidden=document.getElementById('duenoInputCita');
+  var match=animales.find(function(a){return a.nombre.toLowerCase()===val.toLowerCase()});
+  if(match){
+    hidden.value=match.id;
+    duenoDisplay.value=match.dueno_nombre+' (ID: '+match.dueno_id+')';
+    duenoHidden.value=match.dueno_id;
+  }else{
+    hidden.value='';
+    duenoDisplay.value='';
+    duenoHidden.value='';
+  }
+}
+function abrirModalCita(){
+  document.getElementById('formNuevaCita').reset();
+  document.getElementById('animalIdHidden').value='';
+  document.getElementById('duenoDisplayCita').value='';
+  document.getElementById('duenoInputCita').value='';
+  document.getElementById('citaPrecioAdmin').value='0';
+  document.getElementById('modalCita').classList.add('active')
+}
+function cerrarModal(id){document.getElementById(id).classList.remove('active')}
+function editarCita(id,fecha,hora,tipo,motivo,precio){
+  document.getElementById('formEditarCita').action='/citas/'+id+'/editar';
+  document.getElementById('editCitaFecha').value=fecha;
+  document.getElementById('editCitaHora').value=hora||'';
+  document.getElementById('editCitaTipo').value=tipo||'veterinaria';
+  document.getElementById('editCitaMotivo').value=motivo||'';
+  document.getElementById('editCitaPrecio').value=precio||0;
+  document.getElementById('modalEditarCita').classList.add('active')
+}
+document.querySelectorAll('.modal-overlay').forEach(function(el){
+  el.addEventListener('click',function(e){if(e.target===this)this.classList.remove('active')})
+});
+</script>
+{% endblock %}

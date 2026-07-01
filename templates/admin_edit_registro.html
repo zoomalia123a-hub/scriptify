@@ -1,0 +1,27 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div class="card" style="max-width:700px">
+<h2>Editar Registro M&eacute;dico - {{ r.animal_nombre }}</h2>
+<form method="POST">
+<div class="form-row">
+  <div class="form-group"><label>Fecha</label><input type="date" name="fecha" value="{{ r.fecha }}"></div>
+  <div class="form-group"><label>Hora</label><input type="time" name="hora" value="{{ r.hora or '' }}"></div>
+</div>
+<div class="form-row">
+  <div class="form-group"><label>Peso (kg)</label><input type="number" step="0.1" name="peso" value="{{ r.peso or '' }}"></div>
+  <div class="form-group"><label>Doctor</label><input type="text" name="doctor" value="{{ r.doctor or '' }}"></div>
+</div>
+<div class="form-group"><label>Anamnesis</label><textarea name="anamnesis" rows="2">{{ r.anamnesis or '' }}</textarea></div>
+<div class="form-group"><label>Diagn&oacute;stico Presuntivo</label><textarea name="diagnostico_presuntivo" rows="2">{{ r.diagnostico_presuntivo or '' }}</textarea></div>
+<div class="form-group"><label>Diagn&oacute;stico Definitivo</label><textarea name="diagnostico_definitivo" rows="2">{{ r.diagnostico_definitivo or '' }}</textarea></div>
+<div class="form-group"><label>Diagn&oacute;stico</label><textarea name="diagnostico" rows="2">{{ r.diagnostico or '' }}</textarea></div>
+<div class="form-group"><label>Tratamiento</label><textarea name="tratamiento" rows="2">{{ r.tratamiento or '' }}</textarea></div>
+<div class="form-group"><label>Observaciones</label><textarea name="observaciones" rows="2">{{ r.observaciones or '' }}</textarea></div>
+<div class="form-group"><label>Pr&oacute;ximo Control</label><input type="date" name="proximo_control" value="{{ r.proximo_control or '' }}"></div>
+<div style="display:flex;gap:8px">
+  <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Guardar</button>
+  <a href="javascript:history.back()" class="btn btn-secondary">Cancelar</a>
+</div>
+</form>
+</div>
+{% endblock %}

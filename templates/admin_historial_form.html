@@ -1,0 +1,163 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<style>
+@media(max-width:600px){.hc-form-grid{grid-template-columns:1fr!important}}
+.exam-upload{border:2px dashed #e0e0e0;border-radius:12px;padding:16px;margin-bottom:12px;background:var(--bg)}
+.exam-upload label{font-weight:600;font-size:13px;display:block;margin-bottom:6px}
+.exam-upload input[type=file]{font-size:13px}
+.btn-ia { background:#6c5ce7; color:white; padding:10px; font-size:13px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:6px; width:100%; }
+.btn-ia:hover { background:#5a4bd1; }
+.btn-ia-accept { flex:1; padding:8px; font-size:11px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; background:#3498db; color:white; }
+.btn-ia-accept:hover { background:#2980b9; }
+.spinner { display:inline-block; width:14px; height:14px; border:2px solid #ccc; border-top-color:#6c5ce7; border-radius:50%; animation:spin .6s linear infinite; vertical-align:middle; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.form-row{display:flex;gap:12px;margin-bottom:10px}
+@media(max-width:600px){.form-row{flex-direction:column}}
+</style>
+<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:12px">
+    {% if a.foto %}<img src="/photos/{{ a.foto }}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid var(--primary)">{% else %}<div style="width:64px;height:64px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--text-light);border:3px solid var(--primary)"><i class="fas fa-paw"></i></div>{% endif %}
+    <div>
+      <h2 style="margin:0"><i class="fas fa-stethoscope" style="color:var(--primary)"></i> Nueva Consulta: {{ a.nombre }}</h2>
+      <div style="font-size:12px;color:var(--text-light)">{{ a.especie or '?' }}{% if a.raza %} &middot; {{ a.raza }}{% endif %}</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-left:auto">
+    <a href="/animales/{{ a.id }}/historial" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Volver al Historial</a>
+  </div>
+</div>
+
+<form method="POST" action="/animales/{{ a.id }}/historial/nuevo" enctype="multipart/form-data">
+<div class="card">
+  <div class="hc-form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="form-group"><label>Fecha</label><input name="fecha" type="date" value="{{ now.strftime('%Y-%m-%d') }}"></div>
+    <div class="form-group"><label>Hora</label><input name="hora" type="time" value="{{ now.strftime('%H:%M') }}"></div>
+    <div class="form-group"><label>Peso (kg)</label><input name="peso" type="number" step="0.1" min="0"></div>
+    <div class="form-group"><label>Doctor</label><input name="doctor" value="{{ doctor }}"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Signos Vitales</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">
+    <div class="form-group"><label>Temperatura (&deg;C)</label><input name="temperatura" type="number" step="0.1" placeholder="38.5"></div>
+    <div class="form-group"><label>Color Mucosa</label><input name="color_mucosa" type="text" placeholder="Rosado, p&aacute;lido..."></div>
+    <div class="form-group"><label>Frec. Card&iacute;aca (lpm)</label><input name="fc" type="number" placeholder="120"></div>
+    <div class="form-group"><label>Frec. Respiratoria (rpm)</label><input name="fr" type="number" placeholder="30"></div>
+    <div class="form-group"><label>Presi&oacute;n Sist&oacute;lica</label><input name="presion_sistolica" type="number" placeholder="120"></div>
+    <div class="form-group"><label>Presi&oacute;n Diast&oacute;lica</label><input name="presion_diastolica" type="number" placeholder="80"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Anamnesis y Diagn&oacute;stico</h2>
+  <div class="form-group"><label>Anamnesis</label><textarea id="inpAnamnesis" name="anamnesis" rows="3" placeholder="Motivo de consulta, historia del problema..."></textarea></div>
+  <button type="button" class="btn btn-ia" onclick="sugerirIA()">&nbsp; Sugerir con IA</button>
+  <div id="iaPanel" style="display:none;margin-top:6px;padding:10px;background:#f0f4ff;border-radius:8px;border:1px solid #ccd9ff;">
+    <div id="iaLoading" style="display:none;text-align:center;padding:10px;">Procesando... <span class="spinner"></span></div>
+    <div id="iaResult">
+      <h3 style="font-size:13px;color:#2c3e50;margin-bottom:4px;">Sugerencia de IA</h3>
+      <div class="form-group"><label>Diagn&oacute;stico sugerido</label>
+        <textarea id="iaDiagnostico" rows="2" style="font-size:12px;background:white;" readonly></textarea></div>
+      <div class="form-group"><label>Tratamiento sugerido</label>
+        <textarea id="iaTratamiento" rows="2" style="font-size:12px;background:white;" readonly></textarea></div>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <button type="button" class="btn-ia-accept" onclick="aceptarIA('diagnostico_presuntivo')">Aceptar diagn&oacute;stico</button>
+        <button type="button" class="btn-ia-accept" onclick="aceptarIA('tratamiento')">Aceptar tratamiento</button>
+        <button type="button" class="btn-ia-accept" onclick="aceptarIA('ambos')">Aceptar ambos</button>
+      </div>
+      <div id="iaError" style="color:#e74c3c;font-size:12px;margin-top:4px;display:none;"></div>
+    </div>
+  </div>
+  <div class="form-group"><label>Diagn&oacute;stico Presuntivo</label><input id="inpDiagnosticoPresuntivo" name="diagnostico_presuntivo" placeholder="Dx presuntivo"></div>
+  <div class="form-group"><label>Diagn&oacute;stico Definitivo</label><input name="diagnostico_definitivo" placeholder="Dx definitivo"></div>
+  <div class="form-group"><label>Tratamiento</label><textarea id="inpTratamiento" name="tratamiento" rows="3" placeholder="Medicamentos, dosis, indicaciones..."></textarea></div>
+  <div class="form-group"><label>Observaciones</label><textarea name="observaciones" rows="2"></textarea></div>
+</div>
+
+<div class="card">
+  <h2><i class="fas fa-file-image" style="color:var(--info)"></i> Ex&aacute;menes Auxiliares</h2>
+  {% for field, label in [("ecografia","Ecograf\u00eda"),("radiografia","Radiograf\u00eda"),("hemograma","Hemograma"),("bioquimico","Bioqu\u00edmico"),("orina","Orina"),("otros","Otros")] %}
+  <div class="exam-upload">
+    <label><i class="fas fa-{% if field=='ecografia' %}ultrasound{% elif field=='radiografia' %}x-ray{% elif field=='hemograma' %}tint{% elif field=='bioquimico' %}flask{% elif field=='orina' %}tint{% else %}folder-open{% endif %}" style="color:var(--info)"></i> {{ label }}</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input type="file" name="exam_{{ field }}" accept="image/*,.pdf" style="flex:1;min-width:150px;padding:6px;border:1px solid #e0e0e0;border-radius:6px;background:var(--white)">
+      <input type="text" name="exam_{{ field }}_resultados" placeholder="Resultados" style="flex:1;min-width:120px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px">
+    </div>
+    <input type="text" name="exam_{{ field }}_obs" placeholder="Observaciones" style="width:100%;margin-top:4px;padding:8px 10px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px">
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card" style="border-left:4px solid var(--warning)">
+  <h2><i class="fas fa-calendar-plus" style="color:var(--warning)"></i> Pr&oacute;ximo Control / Cita</h2>
+  <div style="font-size:12px;color:var(--text-light);margin-bottom:10px">Se guardar&aacute; como fecha sugerida y se crear&aacute; una cita autom&aacute;ticamente.</div>
+  <div class="form-row">
+    <div class="form-group" style="flex:1"><label>Fecha del pr&oacute;ximo control</label><input name="cita_fecha" type="date"></div>
+    <div class="form-group" style="flex:1"><label>Hora</label><input name="cita_hora" type="time"></div>
+    <div class="form-group" style="flex:1"><label>Tipo</label><select name="cita_tipo"><option value="consulta">Consulta</option><option value="veterinaria">Veterinaria</option><option value="grooming">Grooming</option></select></div>
+  </div>
+  <div class="form-group"><label>Motivo / Raz&oacute;n</label><textarea name="cita_motivo" rows="2" placeholder="Ej: Control post-operatorio, revisi&oacute;n de resultados, segunda dosis vacuna..."></textarea></div>
+</div>
+
+<div style="display:flex;gap:8px;margin-top:16px">
+  <button type="submit" class="btn btn-success" style="flex:1;padding:14px;font-size:16px"><i class="fas fa-save"></i> Guardar Consulta</button>
+  <a href="/animales/{{ a.id }}/historial" class="btn btn-secondary" style="flex:1;padding:14px;text-align:center">Cancelar</a>
+</div>
+</form>
+<script>
+function sugerirIA(){
+  var panel=document.getElementById('iaPanel');
+  var loading=document.getElementById('iaLoading');
+  var result=document.getElementById('iaResult');
+  var error=document.getElementById('iaError');
+  panel.style.display='block';
+  loading.style.display='block';
+  result.style.display='none';
+  error.style.display='none';
+  fetch('/api/ia_sugerir',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      especie: '{{ a.especie|e }}',
+      raza: '{{ a.raza|e }}',
+      edad: '{{ a.edad|e }}',
+      sexo: '{{ a.sexo|e }}',
+      peso: document.querySelector('input[name="peso"]').value,
+      anamnesis: document.getElementById('inpAnamnesis').value,
+      temperatura: document.querySelector('input[name="temperatura"]').value,
+      fc: document.querySelector('input[name="fc"]').value,
+      fr: document.querySelector('input[name="fr"]').value,
+      sintomas: ''
+    })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    loading.style.display='none';
+    if(d.error){
+      error.textContent=d.error;
+      error.style.display='block';
+      return;
+    }
+    document.getElementById('iaDiagnostico').value=d.diagnostico_presuntivo||'';
+    document.getElementById('iaTratamiento').value=d.tratamiento||'';
+    result.style.display='block';
+  })
+  .catch(function(e){
+    loading.style.display='none';
+    error.textContent='Error de conexi\u00f3n: '+e.message;
+    error.style.display='block';
+  });
+}
+function aceptarIA(tipo){
+  var diag=document.getElementById('iaDiagnostico').value;
+  var trat=document.getElementById('iaTratamiento').value;
+  if(tipo=='diagnostico_presuntivo' || tipo=='ambos'){
+    document.getElementById('inpDiagnosticoPresuntivo').value=diag;
+  }
+  if(tipo=='tratamiento' || tipo=='ambos'){
+    document.getElementById('inpTratamiento').value=trat;
+  }
+}
+</script>
+{% endblock %}

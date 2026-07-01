@@ -1,0 +1,31 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div class="card">
+<form method="GET" action="/buscar" style="display:flex;gap:8px">
+  <input type="text" name="q" value="{{ q }}" placeholder="Buscar due&ntilde;os, pacientes, citas, productos..." style="flex:1;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+  <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Buscar</button>
+</form>
+</div>
+{% if q %}
+<div class="card">
+  <h2><i class="fas fa-users"></i> Due&ntilde;os ({{ results.duenos|length }})</h2>
+  {% if results.duenos %}<table><thead><tr><th>ID</th><th>DNI</th><th>Nombre</th><th>Tel&eacute;fono</th></tr></thead><tbody>{% for d in results.duenos %}<tr><td>{{ d.id }}</td><td>{{ d.dni or '-' }}</td><td><a href="/duenos/{{ d.id }}/editar">{{ d.nombre }}</a></td><td>{{ d.telefono or '-' }}</td></tr>{% endfor %}</tbody></table>{% else %}<div class="empty">Sin resultados</div>{% endif %}
+</div>
+<div class="card">
+  <h2><i class="fas fa-paw"></i> Pacientes ({{ results.animales|length }})</h2>
+  {% if results.animales %}<table><thead><tr><th>ID</th><th>Nombre</th><th>Especie</th><th>Due&ntilde;o</th></tr></thead><tbody>{% for a in results.animales %}<tr><td>{{ a.id }}</td><td><a href="/animales/{{ a.id }}">{{ a.nombre }}</a></td><td>{{ a.especie }}</td><td>{{ a.dueno_nombre }}</td></tr>{% endfor %}</tbody></table>{% else %}<div class="empty">Sin resultados</div>{% endif %}
+</div>
+<div class="card">
+  <h2><i class="fas fa-calendar-check"></i> Citas ({{ results.citas|length }})</h2>
+  {% if results.citas %}<table><thead><tr><th>ID</th><th>Paciente</th><th>Fecha</th><th>Motivo</th></tr></thead><tbody>{% for c in results.citas %}<tr><td>{{ c.id }}</td><td>{{ c.animal_nombre }}</td><td>{{ c.fecha }}</td><td>{{ c.motivo }}</td></tr>{% endfor %}</tbody></table>{% else %}<div class="empty">Sin resultados</div>{% endif %}
+</div>
+<div class="card">
+  <h2><i class="fas fa-shopping-cart"></i> Ventas ({{ results.ventas|length }})</h2>
+  {% if results.ventas %}<table><thead><tr><th>ID</th><th>Fecha</th><th>Total</th></tr></thead><tbody>{% for v in results.ventas %}<tr><td>{{ v.id }}</td><td>{{ v.fecha }}</td><td>S/ {{ "%.2f"|format(v.total|float) }}</td></tr>{% endfor %}</tbody></table>{% else %}<div class="empty">Sin resultados</div>{% endif %}
+</div>
+<div class="card">
+  <h2><i class="fas fa-box"></i> Productos ({{ results.productos|length }})</h2>
+  {% if results.productos %}<table><thead><tr><th>ID</th><th>Nombre</th><th>Stock</th><th>Precio</th></tr></thead><tbody>{% for p in results.productos %}<tr><td>{{ p.id }}</td><td>{{ p.nombre }}</td><td><span class="badge {% if p.stock<=5 %}badge-danger{% else %}badge-success{% endif %}">{{ p.stock }}</span></td><td>S/ {{ "%.2f"|format(p.precio_venta|float) }}</td></tr>{% endfor %}</tbody></table>{% else %}<div class="empty">Sin resultados</div>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

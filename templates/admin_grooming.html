@@ -1,0 +1,36 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+  <div><span style="color:var(--text-light);font-size:13px">{{ registros|length }} registro(s)</span></div>
+  <button class="btn btn-primary" onclick="document.getElementById('modalGrooming').classList.add('active')"><i class="fas fa-plus"></i> Nuevo Servicio</button>
+</div>
+
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr><th>ID</th><th>Paciente</th><th>Servicio</th><th>Fecha</th><th>Estilista</th><th>Precio</th><th>Acciones</th></tr></thead>
+  <tbody>{% for r in registros %}<tr><td>{{ r.id }}</td><td>{{ r.animal_nombre }}</td><td>{{ r.servicio_nombre or '-' }}</td><td>{{ r.fecha }}</td><td>{{ r.estilista or '-' }}</td><td>S/ {{ "%.2f"|format(r.precio|float) }}</td><td><a href="/grooming/{{ r.id }}/eliminar" class="btn btn-sm btn-danger" onclick="return confirmDelete()"><i class="fas fa-trash"></i></a></td></tr>{% else %}<tr><td colspan="7"><div class="empty">No hay registros de grooming</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+
+<div class="modal-overlay" id="modalGrooming" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>Nuevo Servicio de Grooming</h2>
+    <form method="POST" action="/grooming/nuevo">
+      <div class="form-group"><label>Paciente</label><select name="id_animal" required><option value="">Seleccione...</option>{% for a in animales %}<option value="{{ a.id }}">{{ a.nombre }} ({{ a.dueno_nombre }})</option>{% endfor %}</select></div>
+      <div class="form-group"><label>Servicio</label><select name="id_servicio" required><option value="">Seleccione...</option>{% for s in servicios %}<option value="{{ s.id }}" data-precio="{{ s.precio }}">{{ s.nombre }} - S/ {{ "%.2f"|format(s.precio|float) }}</option>{% endfor %}</select></div>
+      <div class="form-group"><label>Fecha</label><input type="date" name="fecha" value="{{ hoy }}" required></div>
+      <div class="form-group"><label>Estilista</label><input type="text" name="estilista"></div>
+      <div class="form-group"><label>Precio (S/)</label><input type="number" step="0.01" name="precio" id="precioGrooming" required></div>
+      <div class="form-group"><label>Observaciones</label><textarea name="observaciones" rows="2"></textarea></div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-success">Guardar</button><button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').classList.remove('active')">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.querySelector('#modalGrooming select[name="id_servicio"]')?.addEventListener('change',function(){
+  var opt=this.options[this.selectedIndex];
+  document.getElementById('precioGrooming').value=opt?opt.getAttribute('data-precio'):'';
+});
+</script>
+{% endblock %}

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>{{ title }}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Arial,sans-serif}
+body{padding:20px;color:#2c3e50;font-size:12px}
+h1{font-size:20px;margin-bottom:4px}
+.sub{color:#7f8c8d;font-size:12px;margin-bottom:16px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.stat{border:1px solid #ddd;border-radius:8px;padding:12px}
+.stat .num{font-size:22px;font-weight:700}
+.stat .label{font-size:10px;color:#7f8c8d;text-transform:uppercase}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #eee;font-size:11px}
+th{color:#7f8c8d;font-size:9px;text-transform:uppercase}
+h2{font-size:14px;margin:16px 0 4px;border-bottom:2px solid #1abc9c;padding-bottom:4px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+.col{border:1px solid #eee;border-radius:6px;padding:10px}
+</style>
+</head>
+<body>
+<h1>SCRIPTYFY - {{ reporte.titulo }}</h1>
+<p class="sub">Generado el {{ hoy }}</p>
+
+<div class="stats">
+  <div class="stat"><div class="num">S/ {{ "%.2f"|format(reporte.total_ventas|float) }}</div><div class="label">Ventas</div></div>
+  <div class="stat"><div class="num">S/ {{ "%.2f"|format(reporte.total_egresos|float) }}</div><div class="label">Egresos</div></div>
+  <div class="stat"><div class="num">S/ {{ "%.2f"|format(reporte.margen_bruto|float) }}</div><div class="label">Margen Bruto</div></div>
+  <div class="stat"><div class="num">{{ reporte.total_consultas }}</div><div class="label">Consultas</div></div>
+  <div class="stat"><div class="num">{{ reporte.total_grooming }}</div><div class="label">Grooming</div></div>
+  <div class="stat"><div class="num">{{ reporte.total_creditos }}</div><div class="label">Cr&eacute;ditos Pend.</div></div>
+</div>
+
+{% if reporte.comparativa.ventas_anterior > 0 %}
+<p style="font-size:11px;margin-bottom:12px">
+  Per&iacute;odo anterior ({{ reporte.comparativa.ventas_anterior|round(2) }}): 
+  <strong>{{ "%.1f"|format(reporte.comparativa.variacion) }}%</strong>
+</p>
+{% endif %}
+
+{% if reporte.top_productos %}
+<div class="row">
+  <div class="col">
+    <h2>Top Productos</h2>
+    <table><thead><tr><th>Producto</th><th style="text-align:center">Cant</th><th style="text-align:right">Total</th></tr></thead>
+    <tbody>{% for p in reporte.top_productos %}<tr><td>{{ p.nombre or 'Sin nombre' }}</td><td style="text-align:center">{{ p.cantidad }}</td><td style="text-align:right">S/ {{ "%.2f"|format(p.total|float) }}</td></tr>{% endfor %}</tbody></table>
+  </div>
+  <div class="col">
+    <h2>Top Doctores</h2>
+    <table><thead><tr><th>Doctor</th><th style="text-align:center">Consultas</th></tr></thead>
+    <tbody>{% for d in reporte.top_doctores %}<tr><td>{{ d.doctor }}</td><td style="text-align:center">{{ d.cnt }}</td></tr>{% endfor %}</tbody></table>
+  </div>
+</div>
+{% endif %}
+
+{% if reporte.ventas_list %}
+<h2>Ventas del per&iacute;odo</h2>
+<table><thead><tr><th>ID</th><th>Fecha</th><th>Total</th><th>Tipo</th></tr></thead>
+<tbody>{% for v in reporte.ventas_list %}
+<tr><td>{{ v.id }}</td><td>{{ v.fecha }}</td><td>S/ {{ "%.2f"|format(v.total|float) }}</td><td>{{ v.tipo }}</td></tr>
+{% endfor %}</tbody></table>
+{% endif %}
+</body>
+</html>

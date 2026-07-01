@@ -1,0 +1,53 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+  <div><span style="color:var(--text-light);font-size:13px">{{ items|length }} doctor(es)</span></div>
+  <button class="btn btn-primary" onclick="abrirModalDoctor()"><i class="fas fa-plus"></i> Nuevo Doctor</button>
+</div>
+
+<form method="GET" style="display:flex;gap:8px;margin-bottom:12px;padding:12px;background:var(--bg);border-radius:8px">
+  <input type="text" id="searchDoctor" placeholder="Buscar por nombre..." style="flex:1;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px" autocomplete="off">
+  <button type="button" class="btn btn-primary btn-sm" onclick="filtrarDoctores()"><i class="fas fa-search"></i></button>
+  <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('searchDoctor').value='';filtrarDoctores()"><i class="fas fa-times"></i></button>
+</form>
+
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr><th>ID</th><th>Nombre</th><th>Acciones</th></tr></thead>
+  <tbody id="doctorTableBody">{% for d in items %}<tr data-search="{{ d.nombre|lower }}">
+    <td>{{ d.id }}</td><td style="font-weight:600">{{ d.nombre }}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-sm btn-primary" onclick="abrirModalDoctor({{ d.id }},{{ d.nombre|tojson }})"><i class="fas fa-edit"></i></button>
+      <a href="/doctores/{{ d.id }}/eliminar" class="btn btn-sm btn-danger" onclick="return confirmDelete()"><i class="fas fa-trash"></i></a>
+    </td>
+  </tr>{% else %}<tr><td colspan="3"><div class="empty">No hay doctores</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+
+<div class="modal-overlay" id="modalDoctor" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal" style="max-width:400px">
+    <h2 id="modalDoctorTitle">Nuevo Doctor</h2>
+    <form method="POST" id="formDoctor">
+      <div class="form-group"><label>Nombre *</label><input type="text" name="nombre" id="doc_nombre" required></div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-success">Guardar</button><button type="button" class="btn btn-secondary" onclick="document.getElementById('modalDoctor').classList.remove('active')">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+<script>
+function abrirModalDoctor(id,nombre){
+  var edit=!!id;
+  document.getElementById('modalDoctorTitle').textContent=edit?'Editar Doctor':'Nuevo Doctor';
+  document.getElementById('formDoctor').action=edit?'/doctores/'+id+'/editar':'/doctores/nuevo';
+  document.getElementById('doc_nombre').value=nombre||'';
+  document.getElementById('modalDoctor').classList.add('active');
+}
+function filtrarDoctores(){
+  var q=document.getElementById('searchDoctor').value.toLowerCase().trim();
+  document.querySelectorAll('#doctorTableBody tr').forEach(function(tr){
+    tr.style.display=(!q||tr.getAttribute('data-search').includes(q))?'':'none';
+  });
+}
+document.getElementById('searchDoctor').addEventListener('input',filtrarDoctores);
+</script>
+{% endblock %}

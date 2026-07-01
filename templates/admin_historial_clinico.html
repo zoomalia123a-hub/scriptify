@@ -1,0 +1,376 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<style>
+@media(max-width:600px){
+  .hc-grid{grid-template-columns:1fr!important}
+  .hc-actions{flex-wrap:wrap}
+  table td,table th{padding:6px 4px;font-size:12px}
+  .hc-tabs{overflow-x:auto;white-space:nowrap}
+  .hc-patient-card{flex-direction:column;align-items:flex-start!important}
+}
+.hc-tab{display:inline-block;padding:10px 20px;cursor:pointer;border-radius:8px 8px 0 0;font-size:13px;font-weight:600;color:var(--text-light);background:var(--bg);border:1px solid transparent;margin-right:4px;transition:color .15s,background-color .15s,border-color .15s}
+.hc-tab.active{color:var(--primary);background:var(--white);border-color:#e0e0e0;border-bottom-color:var(--white)}
+.hc-tab:hover{color:var(--primary)}
+.hc-content{display:none;background:var(--white);border-radius:0 8px 8px 8px;padding:16px;margin-top:-1px;border:1px solid #e0e0e0}
+.hc-content.active{display:block}
+.vital-sign{display:inline-flex;flex-direction:column;align-items:center;padding:12px 16px;background:var(--bg);border-radius:12px;min-width:80px}
+.vital-sign .val{font-size:20px;font-weight:700;color:var(--text)}
+.vital-sign .lbl{font-size:10px;color:var(--text-light);text-transform:uppercase;margin-top:2px}
+</style>
+
+<div class="card hc-patient-card" style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap">
+  {% if a.foto %}<img src="/photos/{{ a.foto }}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--primary)">{% else %}<div style="width:80px;height:80px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--text-light);border:3px solid var(--primary)"><i class="fas fa-paw"></i></div>{% endif %}
+  <div style="flex:1;min-width:200px">
+    <h2 style="margin:0 0 2px">{{ a.nombre }}</h2>
+    <div style="font-size:13px;color:var(--text-light);margin-bottom:6px">
+      {{ a.especie or '?' }}{% if a.raza %} &middot; {{ a.raza }}{% endif %}
+      {% if a.edad is not none and a.edad>0 %}&middot; {{ a.edad }} a&ntilde;o(s){% endif %}
+      {% if a.sexo %}&middot; {{ a.sexo }}{% endif %}
+      {% if a.peso is not none and a.peso>0 %}&middot; {{ a.peso }} kg{% endif %}
+    </div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <a href="/animales/{{ a.id }}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> Paciente</a>
+      <a href="/animales/{{ a.id }}/historial/nuevo" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> Nueva Consulta</a>
+      <a href="/animales/nuevo" class="btn btn-sm btn-success" target="_blank"><i class="fas fa-plus"></i> Nuevo Paciente</a>
+      <a href="/animales/{{ a.id }}/historial/exportar" target="_blank" class="btn btn-sm btn-secondary"><i class="fas fa-file-pdf"></i> Exportar</a>
+    </div>
+    <!-- Resumen rapido -->
+    {% if ultima_consulta or ultimo_peso or ultima_vacuna %}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--text-light)">
+      {% if ultima_consulta %}<span><i class="fas fa-stethoscope"></i> Ult. consulta: {{ ultima_consulta.fecha }}</span>{% endif %}
+      {% if ultimo_peso %}<span><i class="fas fa-weight"></i> Ult. peso: {{ ultimo_peso.peso }} kg ({{ ultimo_peso.fecha }})</span>{% endif %}
+      {% if ultima_vacuna %}<span><i class="fas fa-syringe"></i> Ult. vacuna: {{ ultima_vacuna.nombre }} ({{ ultima_vacuna.fecha }})</span>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+  <div style="min-width:220px;padding:12px;background:var(--bg);border-radius:12px;font-size:13px">
+    <strong style="display:block;margin-bottom:4px;color:var(--primary)"><i class="fas fa-user"></i> Due&ntilde;o</strong>
+    <div>{{ a.dueno_nombre }}</div>
+    {% if a.dueno_dni %}<div style="font-size:11px;color:var(--text-light)">DNI: {{ a.dueno_dni }}</div>{% endif %}
+    {% if a.dueno_telefono %}<div><a href="https://wa.me/51{{ a.dueno_telefono }}" target="_blank" style="color:#25D366;text-decoration:none"><i class="fab fa-whatsapp"></i> {{ a.dueno_telefono }}</a></div>{% endif %}
+    <a href="/duenos/{{ a.id_dueno }}" style="font-size:11px;color:var(--primary);display:block;margin-top:4px">Ver perfil completo &raquo;</a>
+    {% if hermanos %}
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e0e0e0">
+      <span style="font-size:11px;color:var(--text-light)"><i class="fas fa-paw"></i> Otras mascotas ({{ hermanos|length }})</span>
+      {% for h in hermanos %}
+      <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+        {% if h.foto %}<img src="/photos/{{ h.foto }}" style="width:24px;height:24px;border-radius:50%;object-fit:cover">{% else %}<i class="fas fa-paw" style="width:24px;text-align:center;color:var(--text-light);font-size:12px"></i>{% endif %}
+        <a href="/animales/{{ h.id }}/historial" style="font-size:12px;{% if h.id==a.id %}color:var(--primary);font-weight:600{% else %}color:var(--text){% endif %}">{{ h.nombre }}</a>
+        <span style="font-size:10px;color:var(--text-light)">{{ h.especie or '' }}{% if h.raza %} - {{ h.raza }}{% endif %}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if citas and citas|length>0 %}
+    <div style="margin-top:6px;padding-top:6px;border-top:1px solid #e0e0e0">
+      <span style="font-size:11px;color:var(--text-light)"><i class="fas fa-calendar"></i> Pr&oacute;ximas citas</span>
+      {% for c in citas[:2] %}
+      <div style="font-size:11px">{{ c.fecha }}{% if c.hora %} {{ c.hora }}{% endif %} - {{ c.motivo or c.tipo }}</div>
+      {% endfor %}
+      <a href="/citas" style="font-size:11px;color:var(--primary);display:block;margin-top:2px">Ver todas las citas &raquo;</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Alertas de proxima dosis -->
+{% if vacunas_alerta %}
+<div class="card" style="border-left:4px solid var(--warning);padding:12px 16px;margin-bottom:16px;background:#fef9e7">
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <i class="fas fa-exclamation-triangle" style="color:var(--warning);font-size:18px"></i>
+    <strong style="font-size:13px;color:var(--warning)">Vacunas con pr&oacute;xima dosis por vencer o vencidas:</strong>
+    {% for v in vacunas_alerta %}
+    <span class="badge {% if v.proxima_dosis < hoy %}badge-danger{% else %}badge-warning{% endif %}" style="font-size:11px">
+      {{ v.nombre }} - {{ v.proxima_dosis }}
+    </span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="hc-tabs">
+  <span class="hc-tab active" onclick="hcTab(this,'consultas')">Consultas ({{ registros|length }})</span>
+  <span class="hc-tab" onclick="hcTab(this,'vacunas')">Vacunas ({{ vacunas|length }})</span>
+  <span class="hc-tab" onclick="hcTab(this,'alergias')">Alergias ({{ alergias|length }})</span>
+  <span class="hc-tab" onclick="hcTab(this,'medicacion')">Medicaci&oacute;n ({{ medicacion|length }})</span>
+  <span class="hc-tab" onclick="hcTab(this,'examenes')">Ex&aacute;menes ({{ examenes|length }})</span>
+</div>
+
+<div id="tab-consultas" class="hc-content active">
+  <!-- Filtros de fecha -->
+  <form method="GET" action="/animales/{{ a.id }}/historial" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:12px;background:var(--bg);border-radius:8px">
+    <input type="date" name="desde" value="{{ desde }}" placeholder="Desde" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+    <input type="date" name="hasta" value="{{ hasta }}" placeholder="Hasta" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px">
+    <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-filter"></i> Filtrar</button>
+    {% if desde or hasta %}<a href="/animales/{{ a.id }}/historial" class="btn btn-sm btn-secondary"><i class="fas fa-times"></i> Limpiar</a>{% endif %}
+    <span style="font-size:12px;color:var(--text-light);margin-left:auto">{{ total_reg }} consulta(s) encontrada(s)</span>
+  </form>
+
+  {% if registros %}
+  {% for r in registros %}
+  <div style="padding:16px;margin-bottom:12px;background:var(--bg);border-radius:12px;border-left:4px solid var(--primary)">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <div>
+        <strong style="font-size:15px">{{ r.fecha }}</strong>
+        {% if r.hora %}<span style="color:var(--text-light);font-size:12px">{{ r.hora }}</span>{% endif %}
+        <span style="color:var(--text-light);font-size:12px;margin-left:8px">Dr. {{ r.doctor or '-' }}</span>
+      </div>
+      <div style="display:flex;gap:4px">
+        <a href="/receta/{{ r.id }}" class="btn btn-sm btn-success" target="_blank" title="Receta"><i class="fas fa-prescription"></i></a>
+        <a href="/registros/{{ r.id }}/editar" class="btn btn-sm btn-primary" title="Editar"><i class="fas fa-edit"></i></a>
+      </div>
+    </div>
+    {% if r.peso is not none %}<div style="font-size:12px;color:var(--text-light);margin-bottom:8px">Peso: <strong>{{ r.peso }} kg</strong></div>{% endif %}
+    {% if r.temperatura is not none or r.frecuencia_cardiaca is not none or r.frecuencia_respiratoria is not none %}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      {% if r.temperatura is not none %}<div class="vital-sign"><span class="val">{{ r.temperatura }}&deg;C</span><span class="lbl">Temp</span></div>{% endif %}
+      {% if r.color_mucosa is not none and r.color_mucosa != '' %}<div class="vital-sign"><span class="val">{{ r.color_mucosa }}</span><span class="lbl">Mucosa</span></div>{% endif %}
+      {% if r.frecuencia_cardiaca is not none %}<div class="vital-sign"><span class="val">{{ r.frecuencia_cardiaca }}</span><span class="lbl">FC</span></div>{% endif %}
+      {% if r.frecuencia_respiratoria is not none %}<div class="vital-sign"><span class="val">{{ r.frecuencia_respiratoria }}</span><span class="lbl">FR</span></div>{% endif %}
+      {% if r.presion_sistolica is not none %}<div class="vital-sign"><span class="val">{{ r.presion_sistolica }}/{{ r.presion_diastolica or '?' }}</span><span class="lbl">Presi&oacute;n</span></div>{% endif %}
+    </div>
+    {% endif %}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
+      <div><strong style="color:var(--text-light);display:block;margin-bottom:2px;font-size:11px;text-transform:uppercase">Diagn&oacute;stico</strong>{{ r.diagnostico or '-' }}</div>
+      <div><strong style="color:var(--text-light);display:block;margin-bottom:2px;font-size:11px;text-transform:uppercase">Tratamiento</strong>{{ r.tratamiento or '-' }}</div>
+      {% if r.anamnesis %}<div><strong style="color:var(--text-light);display:block;margin-bottom:2px;font-size:11px;text-transform:uppercase">Anamnesis</strong>{{ r.anamnesis }}</div>{% endif %}
+      {% if r.diagnostico_presuntivo %}<div><strong style="color:var(--text-light);display:block;margin-bottom:2px;font-size:11px;text-transform:uppercase">Dx Presuntivo</strong>{{ r.diagnostico_presuntivo }}</div>{% endif %}
+      {% if r.diagnostico_definitivo %}<div><strong style="color:var(--text-light);display:block;margin-bottom:2px;font-size:11px;text-transform:uppercase">Dx Definitivo</strong>{{ r.diagnostico_definitivo }}</div>{% endif %}
+      {% if r.observaciones %}<div style="grid-column:1/-1"><strong style="color:var(--text-light);display:block;margin-bottom:2px;font-size:11px;text-transform:uppercase">Observaciones</strong>{{ r.observaciones }}</div>{% endif %}
+      {% if r.proximo_control %}<div><strong style="color:var(--text-light);display:block;margin-bottom:2px;font-size:11px;text-transform:uppercase">Pr&oacute;ximo Control</strong><span style="color:var(--warning);font-weight:600">{{ r.proximo_control }}</span></div>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+  <!-- Paginacion -->
+  {% if total_pages > 1 %}
+  <div class="pagination">
+    {% if page > 1 %}
+    <a href="?page={{ page-1 }}{% if desde %}&desde={{ desde }}{% endif %}{% if hasta %}&hasta={{ hasta }}{% endif %}">&laquo;</a>
+    {% endif %}
+    {% for p in range(1, total_pages+1) %}
+    <a href="?page={{ p }}{% if desde %}&desde={{ desde }}{% endif %}{% if hasta %}&hasta={{ hasta }}{% endif %}" {% if p==page %}class="active"{% endif %}>{{ p }}</a>
+    {% endfor %}
+    {% if page < total_pages %}
+    <a href="?page={{ page+1 }}{% if desde %}&desde={{ desde }}{% endif %}{% if hasta %}&hasta={{ hasta }}{% endif %}">&raquo;</a>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% else %}<div class="empty">Sin consultas registradas</div>{% endif %}
+</div>
+
+<div id="tab-vacunas" class="hc-content">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <span style="font-size:13px;color:var(--text-light)">{{ vacunas|length }} vacuna(s)</span>
+    <button class="btn btn-sm btn-success" onclick="abrirModalVacuna()"><i class="fas fa-plus"></i> Registrar Vacuna</button>
+  </div>
+  {% if vacunas %}
+  <table><thead><tr><th>Fecha</th><th>Nombre</th><th>Lote</th><th>Dosis</th><th>Pr&oacute;xima</th><th>Doctor</th><th>Acci&oacute;n</th></tr></thead>
+  <tbody>{% for v in vacunas %}<tr>
+    <td>{{ v.fecha }}</td><td>{{ v.nombre }}</td><td>{{ v.lote or '-' }}</td><td>{{ v.dosis or '-' }}</td>
+    <td>{% if v.proxima_dosis %}{{ v.proxima_dosis }}{% else %}-{% endif %}</td>
+    <td>{{ v.doctor or '-' }}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-sm btn-primary" onclick="editarVacuna({{ v.id }},this.getAttribute('data-nombre'),this.getAttribute('data-fecha'),this.getAttribute('data-lote'),this.getAttribute('data-dosis'),this.getAttribute('data-prox'),this.getAttribute('data-doctor'),this.getAttribute('data-obs'))" title="Editar"
+        data-nombre="{{ v.nombre|e }}" data-fecha="{{ v.fecha }}" data-lote="{{ v.lote or '' }}" data-dosis="{{ v.dosis or '' }}" data-prox="{{ v.proxima_dosis or '' }}" data-doctor="{{ v.doctor or '' }}" data-obs="{{ v.observaciones or '' }}"><i class="fas fa-edit"></i>
+      <form method="POST" action="/vacunas/{{ v.id }}/eliminar" style="display:inline" onsubmit="return confirm('Eliminar esta vacuna?')">
+        <button class="btn btn-sm btn-danger" title="Eliminar"><i class="fas fa-trash"></i></button>
+      </form>
+    </td>
+  </tr>{% endfor %}</tbody></table>
+  {% else %}<div class="empty">Sin vacunas registradas</div>{% endif %}
+</div>
+
+<div id="tab-alergias" class="hc-content">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <span style="font-size:13px;color:var(--text-light)">{{ alergias|length }} alergia(s)</span>
+    <button class="btn btn-sm btn-danger" onclick="abrirModalAlergia()"><i class="fas fa-plus"></i> Registrar Alergia</button>
+  </div>
+  {% if alergias %}
+  <table><thead><tr><th>Al&eacute;rgeno</th><th>Tipo</th><th>Severidad</th><th>Observaciones</th><th>Acci&oacute;n</th></tr></thead>
+  <tbody>{% for al in alergias %}<tr>
+    <td><strong>{{ al.alergeno }}</strong></td><td>{{ al.tipo or '-' }}</td>
+    <td>{% if al.severidad=='grave' %}<span class="badge badge-danger">Grave</span>{% elif al.severidad=='moderada' %}<span class="badge badge-warning">Moderada</span>{% else %}<span class="badge badge-info">Leve</span>{% endif %}</td>
+    <td>{{ al.observaciones or '-' }}</td>
+    <td>
+      <form method="POST" action="/alergias/{{ al.id }}/eliminar" style="display:inline" onsubmit="return confirm('Eliminar esta alergia?')">
+        <button class="btn btn-sm btn-danger" title="Eliminar"><i class="fas fa-trash"></i></button>
+      </form>
+    </td>
+  </tr>{% endfor %}</tbody></table>
+  {% else %}<div class="empty">Sin alergias registradas</div>{% endif %}
+</div>
+
+<div id="tab-medicacion" class="hc-content">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <span style="font-size:13px;color:var(--text-light)">{{ medicacion|length }} medicamento(s) activo(s)</span>
+    <button class="btn btn-sm btn-primary" onclick="abrirModalMedicacion()"><i class="fas fa-plus"></i> Agregar</button>
+  </div>
+  {% if medicacion %}
+  <table><thead><tr><th>Medicamento</th><th>Dosis</th><th>Frecuencia</th><th>V&iacute;a</th><th>Inicio</th><th>Fin</th></tr></thead>
+  <tbody>{% for m in medicacion %}<tr>
+    <td><strong>{{ m.medicamento }}</strong></td><td>{{ m.dosis }}</td><td>{{ m.frecuencia }}</td>
+    <td>{{ m.via or '-' }}</td><td>{{ m.fecha_inicio }}</td><td>{{ m.fecha_fin or 'Indefinido' }}</td>
+  </tr>{% endfor %}</tbody></table>
+  {% else %}<div class="empty">Sin medicaci&oacute;n activa</div>{% endif %}
+</div>
+
+<div id="tab-examenes" class="hc-content">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <span style="font-size:13px;color:var(--text-light)">{{ examenes|length }} examen(es) auxiliar(es)</span>
+    <button class="btn btn-sm btn-info" onclick="abrirModalExamen()"><i class="fas fa-plus"></i> Registrar Examen</button>
+  </div>
+  {% if examenes %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+  {% for e in examenes %}
+  <div style="background:var(--bg);border-radius:12px;padding:12px;border:1px solid #e0e0e0">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span class="badge badge-info">{{ e.tipo }}</span>
+      <span style="font-size:11px;color:var(--text-light)">{{ e.fecha }}</span>
+    </div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">{{ e.nombre }}</div>
+    {% if e.resultados %}<div style="font-size:12px;color:var(--text);margin-bottom:6px"><strong>Resultados:</strong> {{ e.resultados }}</div>{% endif %}
+    {% if e.archivo %}
+    <div style="margin-top:6px">
+      {% if e.archivo.lower().endswith(('.png','.jpg','.jpeg','.gif','.webp','.bmp')) %}
+      <img src="/examenes/{{ e.archivo }}" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="abrirLightbox('/examenes/{{ e.archivo }}')">
+      {% else %}
+      <a href="/examenes/{{ e.archivo }}" target="_blank" class="btn btn-sm btn-info"><i class="fas fa-file"></i> Ver archivo</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  </div>
+  {% else %}<div class="empty">Sin ex&aacute;menes auxiliares</div>{% endif %}
+</div>
+
+<div class="modal-overlay" id="modalExamen"><div class="modal-box">
+  <h3><i class="fas fa-file-image" style="color:var(--info)"></i> Registrar Examen Auxiliar</h3>
+  <form method="POST" action="/animales/{{ a.id }}/historial/examenes/nuevo" enctype="multipart/form-data">
+    <table style="width:100%;border-collapse:collapse">
+      <tr><td style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Tipo</label><select id="exam_tipo" name="tipo" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"><option>Ecograf&iacute;a</option><option>Radiograf&iacute;a</option><option>Hemograma</option><option>Bioqu&iacute;mico</option><option>Orina</option><option>Otros</option></select><input id="exam_tipo_custom" name="tipo" placeholder="Especificar tipo..." style="display:none;width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td>
+          <td style="padding:4px 0;padding-left:10px"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Nombre *</label><input name="nombre" required style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td></tr>
+      <tr><td colspan="2" style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Archivo (imagen o PDF)</label><input type="file" name="archivo" accept="image/*,.pdf" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px"></td></tr>
+      <tr><td colspan="2" style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Resultados</label><textarea name="resultados" rows="2" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></textarea></td></tr>
+      <tr><td colspan="2" style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Observaciones</label><input name="observaciones" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td></tr>
+    </table>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button type="submit" class="btn btn-success" style="flex:1">Guardar</button>
+      <button type="button" class="btn btn-secondary" style="flex:1" onclick="cerrarModal('modalExamen')">Cancelar</button>
+    </div>
+  </form>
+</div></div>
+
+<!-- Lightbox -->
+<div class="modal-overlay" id="lightboxModal" style="background:rgba(0,0,0,.85);z-index:9999">
+  <div style="max-width:90vw;max-height:90vh;position:relative">
+    <img id="lightboxImg" style="max-width:90vw;max-height:90vh;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <button onclick="cerrarLightbox()" style="position:absolute;top:-40px;right:0;background:rgba(255,255,255,.2);color:white;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:18px">&times; Cerrar</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalVacuna"><div class="modal-box">
+  <h3><i class="fas fa-syringe" style="color:var(--primary)"></i> Registrar Vacuna</h3>
+  <form method="POST" action="/animales/{{ a.id }}/historial/vacunas/nuevo">
+    <table style="width:100%;border-collapse:collapse">
+      <tr><td style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Nombre</label><input name="nombre" required style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td>
+          <td style="padding:4px 0;padding-left:10px"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Fecha</label><input name="fecha" type="date" value="{{ hoy }}" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td></tr>
+      <tr><td style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Lote</label><input name="lote" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td>
+          <td style="padding:4px 0;padding-left:10px"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Dosis</label><input name="dosis" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td></tr>
+      <tr><td style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Pr&oacute;xima dosis</label><input name="proxima_dosis" type="date" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td>
+          <td style="padding:4px 0;padding-left:10px"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Doctor</label><input name="doctor" value="{{ doctor }}" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td></tr>
+      <tr><td colspan="2" style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Observaciones</label><input name="observaciones" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td></tr>
+    </table>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button type="submit" class="btn btn-success" style="flex:1">Guardar</button>
+      <button type="button" class="btn btn-secondary" style="flex:1" onclick="cerrarModal('modalVacuna')">Cancelar</button>
+    </div>
+  </form>
+</div></div>
+
+<div class="modal-overlay" id="modalAlergia"><div class="modal-box">
+  <h3><i class="fas fa-exclamation-triangle" style="color:#e74c3c"></i> Registrar Alergia</h3>
+  <form method="POST" action="/animales/{{ a.id }}/historial/alergias/nuevo">
+    <table style="width:100%;border-collapse:collapse">
+      <tr><td colspan="2" style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Al&eacute;rgeno</label><input name="alergeno" required style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td></tr>
+      <tr><td style="padding:4px 0;width:50%"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Tipo</label><select id="alergiaTipo" name="tipo" onchange="alergiaTipoChange(this)" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"><option value="">--</option><option>Alimenticia</option><option>Medicamentosa</option><option>Ambiental</option><option>Dermatitis</option><option>Otro</option></select><input id="alergiaTipoCustom" name="tipo" placeholder="Especificar tipo..." style="display:none;width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td>
+          <td style="padding:4px 0;padding-left:10px;width:50%"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Severidad</label><select name="severidad" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"><option value="leve">Leve</option><option value="moderada">Moderada</option><option value="grave">Grave</option></select></td></tr>
+      <tr><td colspan="2" style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Observaciones</label><input name="observaciones" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td></tr>
+    </table>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button type="submit" class="btn btn-success" style="flex:1">Guardar</button>
+      <button type="button" class="btn btn-secondary" style="flex:1" onclick="cerrarModal('modalAlergia')">Cancelar</button>
+    </div>
+  </form>
+</div></div>
+
+<div class="modal-overlay" id="modalMedicacion"><div class="modal-box">
+  <h3><i class="fas fa-pills" style="color:var(--primary)"></i> Registrar Medicaci&oacute;n</h3>
+  <form method="POST" action="/animales/{{ a.id }}/historial/medicacion/nuevo">
+    <table style="width:100%;border-collapse:collapse">
+      <tr><td style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Medicamento</label><input name="med_nombre" required style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td>
+          <td style="padding:4px 0;padding-left:10px"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Dosis</label><input name="med_dosis" required style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td></tr>
+      <tr><td style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Frecuencia</label><select name="med_frecuencia" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"><option value="">--</option><option>Cada 8h</option><option>Cada 12h</option><option>Cada 24h</option><option>Semanal</option><option>Quincenal</option><option>Mensual</option></select></td>
+          <td style="padding:4px 0;padding-left:10px"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">V&iacute;a</label><select name="med_via" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"><option value="">--</option><option>Oral</option><option>Inyectable</option><option>T&oacute;pica</option><option>Subcut&aacute;nea</option><option>Intramuscular</option><option>Intravenosa</option></select></td></tr>
+      <tr><td style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Fecha inicio</label><input name="med_fecha_inicio" type="date" value="{{ hoy }}" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td>
+          <td style="padding:4px 0;padding-left:10px"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Observaciones</label><input name="med_observaciones" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td></tr>
+    </table>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button type="submit" class="btn btn-success" style="flex:1">Guardar</button>
+      <button type="button" class="btn btn-secondary" style="flex:1" onclick="cerrarModal('modalMedicacion')">Cancelar</button>
+    </div>
+  </form>
+</div></div>
+
+<div class="modal-overlay" id="modalEditVacuna"><div class="modal-box">
+  <h3><i class="fas fa-syringe" style="color:var(--primary)"></i> Editar Vacuna</h3>
+  <form id="formEditVacuna" method="POST" action="">
+    <table style="width:100%;border-collapse:collapse">
+      <tr><td style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Nombre</label><input name="nombre" id="editVacNombre" required style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td>
+          <td style="padding:4px 0;padding-left:10px"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Fecha</label><input name="fecha" id="editVacFecha" type="date" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td></tr>
+      <tr><td style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Lote</label><input name="lote" id="editVacLote" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td>
+          <td style="padding:4px 0;padding-left:10px"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Dosis</label><input name="dosis" id="editVacDosis" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td></tr>
+      <tr><td style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Pr&oacute;xima dosis</label><input name="proxima_dosis" id="editVacProx" type="date" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td>
+          <td style="padding:4px 0;padding-left:10px"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Doctor</label><input name="doctor" id="editVacDoctor" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td></tr>
+      <tr><td colspan="2" style="padding:4px 0"><label style="display:block;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:2px">Observaciones</label><input name="observaciones" id="editVacObs" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;box-sizing:border-box"></td></tr>
+    </table>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button type="submit" class="btn btn-success" style="flex:1">Guardar Cambios</button>
+      <button type="button" class="btn btn-secondary" style="flex:1" onclick="cerrarModal('modalEditVacuna')">Cancelar</button>
+    </div>
+  </form>
+</div></div>
+
+<script src="/static/razas.js"></script>
+<script>
+initOtro('exam_tipo','exam_tipo_custom');
+function hcTab(el,tab){
+  document.querySelectorAll('.hc-tab').forEach(function(t){t.classList.remove('active')});
+  document.querySelectorAll('.hc-content').forEach(function(c){c.classList.remove('active')});
+  el.classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+}
+function abrirModalVacuna(){document.getElementById('modalVacuna').classList.add('active')}
+function abrirModalAlergia(){document.getElementById('modalAlergia').classList.add('active')}
+function abrirModalMedicacion(){document.getElementById('modalMedicacion').classList.add('active')}
+function abrirModalExamen(){document.getElementById('modalExamen').classList.add('active')}
+function cerrarModal(id){document.getElementById(id).classList.remove('active')}
+function alergiaTipoChange(sel){var inp=document.getElementById('alergiaTipoCustom');if(sel.value=='Otro'){sel.style.display='none';inp.style.display='block';inp.focus()}else if(inp.style.display=='block'){sel.style.display='block';inp.style.display='none';inp.value=''}}
+function abrirLightbox(src){document.getElementById('lightboxImg').src=src;document.getElementById('lightboxModal').classList.add('active')}
+function cerrarLightbox(){document.getElementById('lightboxModal').classList.remove('active')}
+function editarVacuna(id,nombre,fecha,lote,dosis,prox,doctor,obs){
+  document.getElementById('editVacNombre').value=nombre;
+  document.getElementById('editVacFecha').value=fecha;
+  document.getElementById('editVacLote').value=lote;
+  document.getElementById('editVacDosis').value=dosis;
+  document.getElementById('editVacProx').value=prox;
+  document.getElementById('editVacDoctor').value=doctor;
+  document.getElementById('editVacObs').value=obs;
+  document.getElementById('formEditVacuna').action='/vacunas/'+id+'/editar';
+  document.getElementById('modalEditVacuna').classList.add('active');
+}
+document.querySelectorAll('.modal-overlay').forEach(function(el){
+  el.addEventListener('click',function(e){if(e.target===this)this.classList.remove('active')});
+});
+</script>
+{% endblock %}

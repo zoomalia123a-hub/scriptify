@@ -1,0 +1,108 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div class="card">
+<h2>Editar Venta #{{ v.id }}</h2>
+<p style="color:var(--text-light);font-size:13px;margin-bottom:12px">Al guardar se revertir&aacute; el stock anterior y se aplicar&aacute; el nuevo.</p>
+<form method="POST" id="editVentaForm">
+<div class="form-row">
+  <div class="form-group"><label>DNI/RUC</label><input type="text" name="cliente_dni" value="{{ v.cliente_dni or '' }}" maxlength="11"></div>
+  <div class="form-group"><label>Cliente</label><input type="text" name="cliente_nombre" value="{{ v.cliente_nombre or '' }}"></div>
+</div>
+<div class="form-row">
+  <div class="form-group"><label>Comprobante</label><select name="tipo_comprobante">
+    <option value="Boleta" {% if v.tipo_comprobante=='Boleta' %}selected{% endif %}>Boleta</option>
+    <option value="Factura" {% if v.tipo_comprobante=='Factura' %}selected{% endif %}>Factura</option>
+    <option value="Nota de Venta" {% if v.tipo_comprobante=='Nota de Venta' %}selected{% endif %}>Nota de Venta</option>
+  </select></div>
+  <div class="form-group"><label>M&eacute;todo Pago</label><select name="metodo_pago">
+    <option value="efectivo" {% if v.metodo_pago=='efectivo' %}selected{% endif %}>Efectivo</option>
+    <option value="yape" {% if v.metodo_pago=='yape' %}selected{% endif %}>Yape</option>
+    <option value="plin" {% if v.metodo_pago=='plin' %}selected{% endif %}>Plin</option>
+    <option value="tarjeta" {% if v.metodo_pago=='tarjeta' %}selected{% endif %}>Tarjeta</option>
+    <option value="transferencia" {% if v.metodo_pago=='transferencia' %}selected{% endif %}>Transferencia</option>
+  </select></div>
+</div>
+
+<div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+  <input type="text" id="editProdInput" placeholder="Agregar producto por nombre o c&oacute;digo..." style="flex:1;min-width:150px;padding:8px 12px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px" autocomplete="off">
+  <input type="number" id="editCantInput" value="1" min="1" style="width:70px;padding:8px;border:2px solid #e0e0e0;border-radius:8px">
+  <button type="button" class="btn btn-primary" onclick="agregarItemEdit()"><i class="fas fa-plus"></i> Agregar</button>
+</div>
+
+<table id="itemsTable"><thead><tr><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Precio Unit.</th><th>Subtotal</th><th></th></tr></thead>
+<tbody id="editItemsBody"></tbody>
+</table>
+<div style="text-align:right;font-size:20px;font-weight:700;margin:12px 0">Total: S/ <span id="editTotal">0.00</span></div>
+<input type="hidden" name="items" id="editItemsInput">
+<div style="display:flex;gap:8px">
+  <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Guardar Cambios</button>
+  <a href="/ventas/{{ v.id }}" class="btn btn-secondary">Cancelar</a>
+</div>
+</form>
+</div>
+
+<script>
+var _editProductosData = [];
+{% for p in productos %}
+_editProductosData.push({id:{{ p.id }}, nombre:{{ p.nombre|tojson }}, precio:{{ p.precio_venta }}, stock:{{ p.stock }}, barcode:{{ (p.codigo_barras or '')|tojson }}});
+{% endfor %}
+var _editItems = [
+{% for it in items %}
+{id:{{ it.referencia_id or 'null' }}, tipo:'{{ it.tipo_item }}', nombre:{{ it.nombre|tojson }}, precio:{{ it.precio_unitario }}, cant:{{ it.cantidad }}, subtotal:{{ it.subtotal }}}{% if not loop.last %},{% endif %}
+{% endfor %}
+];
+
+function renderEditItems() {
+  var t = document.getElementById('editItemsBody');
+  t.innerHTML = '';
+  var tot = 0;
+  _editItems.forEach(function(it, i) {
+    var st = it.cant * it.precio;
+    it.subtotal = st;
+    tot += st;
+    var tag = it.tipo === 'servicio_medico' ? '<span style="font-size:10px;background:#d6eaf8;color:#2980b9;padding:1px 6px;border-radius:4px">M&eacute;d.</span>' : it.tipo === 'servicio_grooming' ? '<span style="font-size:10px;background:#d5f5e3;color:#27ae60;padding:1px 6px;border-radius:4px">Groom</span>' : it.tipo === 'combo' ? '<span style="font-size:10px;background:#fef9e7;color:#f39c12;padding:1px 6px;border-radius:4px">Combo</span>' : '';
+    t.innerHTML += '<tr>' +
+      '<td>' + it.nombre + '</td>' +
+      '<td>' + tag + '</td>' +
+      '<td><input type="number" value="' + it.cant + '" min="1" style="width:60px;padding:4px;border:1px solid #ddd;border-radius:4px" onchange="updateEditItem(' + i + ',this.value)"></td>' +
+      '<td><input type="number" step="0.01" value="' + it.precio.toFixed(2) + '" style="width:100px;padding:4px;border:1px solid #ddd;border-radius:4px" onchange="updateEditItemPrecio(' + i + ',this.value)"></td>' +
+      '<td style="font-weight:600">S/ ' + st.toFixed(2) + '</td>' +
+      '<td><button type="button" class="btn btn-sm btn-danger" onclick="removeEditItem(' + i + ')"><i class="fas fa-times"></i></button></td>' +
+      '</tr>';
+  });
+  document.getElementById('editTotal').textContent = tot.toFixed(2);
+  document.getElementById('editItemsInput').value = JSON.stringify(_editItems);
+}
+function updateEditItem(i, v) { _editItems[i].cant = parseInt(v) || 1; renderEditItems(); }
+function updateEditItemPrecio(i, v) { _editItems[i].precio = parseFloat(v) || 0; renderEditItems(); }
+function removeEditItem(i) { _editItems.splice(i, 1); renderEditItems(); }
+
+function agregarItemEdit() {
+  var inp = document.getElementById('editProdInput');
+  var val = inp.value.trim().toLowerCase();
+  if (!val) { alert('Escribe un nombre o c&oacute;digo de producto'); return; }
+  var match = _editProductosData.find(function(p) { return p.barcode && p.barcode.toLowerCase() === val; });
+  if (!match) match = _editProductosData.find(function(p) { return p.nombre.toLowerCase() === val; });
+  if (!match) match = _editProductosData.find(function(p) { return p.nombre.toLowerCase().includes(val); });
+  if (!match) { alert('Producto no encontrado'); return; }
+  var cant = parseInt(document.getElementById('editCantInput').value) || 1;
+  if (match.stock > 0 && cant > match.stock) { alert('Stock insuficiente (disponible: ' + match.stock + ')'); return; }
+  var existing = _editItems.findIndex(function(it) { return it.id === match.id && it.tipo === 'producto'; });
+  if (existing >= 0) {
+    _editItems[existing].cant += cant;
+  } else {
+    _editItems.push({ id: match.id, tipo: 'producto', nombre: match.nombre, precio: match.precio, cant: cant, subtotal: cant * match.precio });
+  }
+  renderEditItems();
+  inp.value = '';
+  document.getElementById('editCantInput').value = 1;
+}
+
+// Form submit: serialize items
+document.getElementById('editVentaForm').addEventListener('submit', function(e) {
+  document.getElementById('editItemsInput').value = JSON.stringify(_editItems);
+});
+
+renderEditItems();
+</script>
+{% endblock %}

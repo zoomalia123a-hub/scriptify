@@ -1,0 +1,114 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<div id="backupAlert" style="display:none"></div>
+<div class="stats">
+  <div class="stat-card"><div class="icon" style="background:#3498db"><i class="fas fa-users"></i></div><div class="info"><div class="num">{{ td }}</div><div class="label">Due&ntilde;os</div></div></div>
+  <div class="stat-card"><div class="icon" style="background:#1abc9c"><i class="fas fa-paw"></i></div><div class="info"><div class="num">{{ ta }}</div><div class="label">Pacientes</div></div></div>
+  <div class="stat-card"><div class="icon" style="background:#f39c12"><i class="fas fa-calendar-check"></i></div><div class="info"><div class="num">{{ ch }}</div><div class="label">Citas Hoy</div></div></div>
+  <div class="stat-card"><div class="icon" style="background:#e74c3c"><i class="fas fa-stethoscope"></i></div><div class="info">
+    <div class="num">{{ co_hoy }}</div>
+    <div class="label">
+      Consultas Hoy
+      {% if co_ayer > 0 %}
+        {% set diff = co_hoy - co_ayer %}
+        {% set pct = ((diff / co_ayer) * 100)|round(1) %}
+        <span style="font-size:11px;color:{% if diff >= 0 %}var(--success){% else %}var(--danger){% endif %}">
+          {% if diff >= 0 %}<i class="fas fa-arrow-up"></i>{% else %}<i class="fas fa-arrow-down"></i>{% endif %}
+          {{ pct }}% vs ayer
+        </span>
+      {% endif %}
+    </div>
+  </div></div>
+  <div class="stat-card"><div class="icon" style="background:#8e44ad"><i class="fas fa-hand-holding-usd"></i></div><div class="info"><div class="num">{{ cp_count }}</div><div class="label">Cobros Pend. <span style="font-size:11px;color:var(--danger)">S/ {{ '%.2f'|format(cp_total|float) }}</span></div></div></div>
+  <div class="stat-card"><div class="icon" style="background:#e67e22"><i class="fas fa-credit-card"></i></div><div class="info"><div class="num">{{ cred_count }}</div><div class="label">Cr&eacute;ditos <span style="font-size:11px;color:var(--warning)">S/ {{ '%.2f'|format(cred_total|float) }}</span></div></div></div>
+  <div class="stat-card"><div class="icon" style="background:#27ae60"><i class="fas fa-shopping-cart"></i></div><div class="info"><div class="num">S/ {{ '%.2f'|format(ventas_hoy|float) }}</div><div class="label">Ventas Hoy</div></div></div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+<div class="card">
+  <h2><i class="fas fa-chart-line" style="color:var(--primary)"></i> Ventas &Uacute;ltimos 7 D&iacute;as</h2>
+  <canvas id="chartVentas" height="150"></canvas>
+</div>
+<div class="card">
+  <h2><i class="fas fa-trophy" style="color:var(--warning)"></i> Top Productos M&aacute;s Vendidos</h2>
+  <canvas id="chartTop" height="150"></canvas>
+</div>
+<div class="card">
+  <h2><i class="fas fa-chart-pie" style="color:var(--info)"></i> Distribuci&oacute;n por Especie</h2>
+  <canvas id="chartEspecies" height="150"></canvas>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+<div class="card">
+  <h2><i class="fas fa-exclamation-triangle" style="color:var(--warning)"></i> Productos con Stock Bajo</h2>
+  {% if prod_bajos %}
+  <table><thead><tr><th>Producto</th><th>Stock</th></tr></thead><tbody>
+  {% for p in prod_bajos %}<tr><td>{{ p.nombre }}</td><td><span class="badge badge-danger">{{ p.stock }}</span></td></tr>{% endfor %}
+  </tbody></table>
+  <div style="text-align:right;margin-top:8px"><a href="/productos" class="btn btn-sm btn-info">Ver todos <i class="fas fa-arrow-right"></i></a></div>
+  {% else %}<div class="empty">Todo en stock &oacute;ptimo</div>{% endif %}
+</div>
+<div class="card">
+  <h2><i class="fas fa-clock" style="color:var(--info)"></i> Citas Pendientes Hoy</h2>
+  {% if citas_list %}
+  <table><thead><tr><th>Paciente</th><th>Due&ntilde;o</th><th>Motivo</th></tr></thead><tbody>
+  {% for c in citas_list %}<tr><td>{{ c.animal_nombre }}</td><td>{{ c.dueno_nombre }}</td><td>{{ c.motivo }}</td></tr>{% endfor %}
+  </tbody></table>
+  <div style="text-align:right;margin-top:8px"><a href="/citas" class="btn btn-sm btn-info">Ver todas <i class="fas fa-arrow-right"></i></a></div>
+  {% else %}<div class="empty">No hay citas pendientes hoy</div>{% endif %}
+</div>
+</div>
+
+{% if session.rol == 'admin' %}
+<div class="card" style="margin-top:16px;text-align:center;padding:16px;">
+  <button class="btn btn-primary" onclick="crearBackup()"><i class="fas fa-database"></i> Crear Backup</button>
+  <a href="/backup/descargar" class="btn btn-secondary"><i class="fas fa-download"></i> Descargar &uacute;ltimo backup</a>
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+var ventasSemana = {{ ventas_semana|tojson }};
+var dias = {{ dias|tojson }};
+if (ventasSemana.length) {
+  new Chart(document.getElementById('chartVentas'),{
+    type:'line',
+    data:{labels:dias,datasets:[{label:'Ventas S/',data:ventasSemana,borderColor:'#1abc9c',backgroundColor:'rgba(26,188,156,.1)',fill:true,tension:.3}]},
+    options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
+  });
+}
+var topProductos = {{ top_productos|safe }};
+if (topProductos && topProductos.length) {
+  new Chart(document.getElementById('chartTop'),{
+    type:'bar',
+    data:{labels:topProductos.map(function(p){return p.nombre}),datasets:[{label:'Vendidos',data:topProductos.map(function(p){return p.total_vendido}),backgroundColor:'#f39c12'}]},
+    options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}
+  });
+}
+var especies = {{ especies|safe }};
+if (especies && especies.length) {
+  var colores = ['#3498db','#1abc9c','#f39c12','#e74c3c','#9b59b6','#e67e22','#2ecc71','#1abc9c'];
+  new Chart(document.getElementById('chartEspecies'),{
+    type:'doughnut',
+    data:{labels:especies.map(function(e){return e.especie}),datasets:[{data:especies.map(function(e){return e.cnt}),backgroundColor:colores.slice(0,especies.length)}]},
+    options:{responsive:true,plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}}}
+  });
+}
+function crearBackup(){
+  var btn=event.target;
+  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Creando...';
+  fetch('/api/backup/crear',{method:'POST'}).then(function(r){return r.json()}).then(function(d){
+    var a=document.getElementById('backupAlert');
+    if(d.ok){
+      a.style.display='block'; a.className='alert alert-success';
+      a.innerHTML='<i class="fas fa-check-circle"></i> Backup realizado. <a href="/backup/descargar" style="font-weight:bold">Descargar</a>';
+    }else{
+      a.style.display='block'; a.className='alert alert-danger';
+      a.innerHTML='<i class="fas fa-times-circle"></i> Error: '+d.error;
+    }
+    btn.disabled=false; btn.innerHTML='<i class="fas fa-database"></i> Crear Backup';
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,275 @@
+{% extends "admin_base.html" %}
+{% block content %}
+<style>
+@media(max-width:600px){.prod-filters{flex-direction:column}}
+.tabs{display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e0e0e0}
+.tab{display:flex;align-items:center;gap:6px;padding:10px 18px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-light);border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;text-decoration:none}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab .badge-tab{background:#e0e0e0;color:#666;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700}
+.tab.active .badge-tab{background:var(--primary);color:#fff}
+.tab-content{display:none}.tab-content.active{display:block}
+body.dark .tabs{border-bottom-color:#444}
+body.dark .tab{color:#999}
+body.dark .tab.active{color:var(--primary)}
+body.dark .tab .badge-tab{background:#444;color:#ccc}
+body.dark .tab.active .badge-tab{background:var(--primary);color:#fff}
+</style>
+
+{% if stock_critico > 0 and tab=='productos' %}
+<div class="alert alert-danger" style="display:flex;align-items:center;gap:8px">
+  <i class="fas fa-exclamation-triangle"></i>
+  <strong>{{ stock_critico }} producto(s) con stock cr&iacute;tico (&le; stock m&iacute;nimo)</strong>
+  <a href="/productos?stock_bajo=1" class="btn btn-sm btn-danger" style="margin-left:auto;text-decoration:none">Ver</a>
+</div>
+{% endif %}
+
+<div class="tabs">
+  <a href="/productos?tab=productos" class="tab {% if tab=='productos' or not tab %}active{% endif %}"><i class="fas fa-box"></i> Productos {% if total %}<span class="badge-tab">{{ total }}</span>{% endif %}</a>
+  <a href="/productos?tab=servicios_medicos" class="tab {% if tab=='servicios_medicos' %}active{% endif %}"><i class="fas fa-stethoscope"></i> Servicios M&eacute;dicos {% if servicios_medicos %}<span class="badge-tab">{{ servicios_medicos|length }}</span>{% endif %}</a>
+  <a href="/productos?tab=grooming" class="tab {% if tab=='grooming' %}active{% endif %}"><i class="fas fa-cut"></i> Grooming {% if grooming_servicios %}<span class="badge-tab">{{ grooming_servicios|length }}</span>{% endif %}</a>
+</div>
+
+{# TAB: PRODUCTOS #}
+<div class="tab-content {% if tab=='productos' or not tab %}active{% endif %}" id="tab-productos">
+
+<form method="GET" action="/productos" class="prod-filters" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;padding:12px;background:var(--bg);border-radius:8px">
+  <input type="hidden" name="tab" value="productos">
+  <input type="text" name="q" placeholder="Buscar nombre o descripci&oacute;n..." value="{{ q or '' }}" style="flex:1;min-width:160px;padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px" autocomplete="off">
+  <select name="categoria" style="padding:8px 10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px">
+    <option value="">Todas las categor&iacute;as</option>
+    {% for c in categorias %}
+    <option value="{{ c }}" {% if cat_f==c %}selected{% endif %}>{{ c }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-primary btn-sm" style="padding:8px 14px"><i class="fas fa-search"></i></button>
+  <a href="/productos?tab=productos" class="btn btn-secondary btn-sm" style="padding:8px 14px;text-decoration:none"><i class="fas fa-times"></i></a>
+</form>
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+  <div><span style="color:var(--text-light);font-size:13px">{{ total }} producto(s) &middot; P&aacute;gina {{ page }} de {{ total_pages }}</span></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">
+    <a href="/catalogo/menor" class="btn btn-sm btn-info" target="_blank"><i class="fas fa-book"></i> Cat&aacute;logo Menor</a>
+    <a href="/catalogo/mayor" class="btn btn-sm btn-warning" target="_blank"><i class="fas fa-book"></i> Cat&aacute;logo Mayor</a>
+    <a href="/productos/nuevo" class="btn btn-primary"><i class="fas fa-plus"></i> Nuevo Producto</a>
+  </div>
+</div>
+
+<form method="POST" action="/productos/eliminar-masivo" id="form-bulk-delete" onsubmit="return confirm('Eliminar los productos seleccionados?')">
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr>
+    <th><input type="checkbox" id="select-all" style="width:16px;height:16px;cursor:pointer"></th>
+    <th></th><th>ID</th><th>Nombre</th><th>SKU</th><th>Categor&iacute;a</th><th>Stock</th><th>Stock M&iacute;n</th><th>Compra S/</th><th>Venta S/</th><th>Kilo S/</th><th>Mayor S/</th><th>Ganancia S/</th><th>Acciones</th>
+  </tr></thead>
+  <tbody>{% for it in items %}<tr>
+    <td><input type="checkbox" name="ids" value="{{ it.id }}" class="select-item" style="width:16px;height:16px;cursor:pointer"></td>
+    <td>{% if it.foto %}<img src="/productos_photos/{{ it.foto }}" style="width:60px;height:60px;border-radius:6px;object-fit:cover;mix-blend-mode:multiply">{% else %}<div style="width:60px;height:60px;border-radius:8px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text-light)"><i class="fas fa-box"></i></div>{% endif %}</td>
+    <td>{{ it.id }}</td>
+    <td><a href="/productos/{{ it.id }}" style="color:var(--primary);text-decoration:none;font-weight:600">{{ it.nombre }}</a></td>
+    <td style="font-size:12px;font-family:monospace;font-weight:600">{{ it.codigo_barras or '-' }}</td>
+      <td>{{ it.categoria or '-' }}{% if it.por_mayor %} <span class="badge badge-info" style="font-size:9px;vertical-align:middle">May</span>{% endif %}</td>
+    <td><span class="badge {% if it.stock_minimo and it.stock<=it.stock_minimo %}badge-danger{% elif it.stock<=10 %}badge-warning{% else %}badge-success{% endif %} stock-badge" data-id="{{ it.id }}" data-stock="{{ it.stock }}" ondblclick="editarStock(this,{{ it.id }})" title="Doble clic para editar stock">{{ it.stock }}</span></td>
+    <td style="font-size:12px;color:var(--text-light)">{{ it.stock_minimo or 5 }}</td>
+    <td>S/ {{ "%.2f"|format(it.precio_compra|float) }}</td>
+    <td>S/ {{ "%.2f"|format(it.precio_venta|float) }}</td>
+    <td>{% if it.vende_por_kilo and it.precio_kilo|float>0 %}S/ {{ "%.2f"|format(it.precio_kilo|float) }}{% endif %}</td>
+    <td>S/ {{ "%.2f"|format(it.precio_venta|float * (1 - (it.descuento_mayorista|default(0)|float)/100)) }}</td>
+    <td style="{% if it.ganancia>0 %}color:#27ae60{% elif it.ganancia<0 %}color:#e74c3c{% endif %};font-weight:600">S/ {{ "%.2f"|format(it.ganancia|float) }}</td>
+    <td style="white-space:nowrap">
+      <a href="/productos/{{ it.id }}" class="btn btn-sm btn-info" title="Ver detalle"><i class="fas fa-eye"></i></a>
+      <a href="/productos/{{ it.id }}/editar" class="btn btn-sm btn-primary" title="Editar"><i class="fas fa-edit"></i></a>
+      <a href="/productos/{{ it.id }}/eliminar" class="btn btn-sm btn-danger" title="Eliminar" onclick="return confirm('Eliminar {{ it.nombre|e }}?')"><i class="fas fa-trash"></i></a>
+    </td>
+  </tr>  {% else %}<tr><td colspan="13"><div class="empty"><i class="fas fa-box" style="font-size:32px;display:block;margin-bottom:8px"></i>No hay productos</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+<div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+  <button type="submit" class="btn btn-danger btn-sm" id="btn-bulk-delete" disabled><i class="fas fa-trash"></i> Eliminar seleccionados</button>
+  <span style="font-size:12px;color:var(--text-light)" id="selected-count">0 seleccionados</span>
+</div>
+</form>
+<script>
+(function(){
+  var selectAll = document.getElementById('select-all');
+  var items = document.querySelectorAll('.select-item');
+  var btn = document.getElementById('btn-bulk-delete');
+  var countEl = document.getElementById('selected-count');
+  if(selectAll){
+    selectAll.addEventListener('change', function(){
+      items.forEach(function(cb){ cb.checked = selectAll.checked; });
+      updateBulkDelete();
+    });
+  }
+  items.forEach(function(cb){
+    cb.addEventListener('change', updateBulkDelete);
+  });
+  function updateBulkDelete(){
+    var checked = document.querySelectorAll('.select-item:checked');
+    btn.disabled = checked.length === 0;
+    countEl.textContent = checked.length + ' seleccionado(s)';
+  }
+})();
+</script>
+
+{% if total_pages>1 %}
+<div class="pag" style="display:flex;justify-content:center;align-items:center;gap:6px;padding:12px;flex-wrap:wrap">
+  {% if page>1 %}<a href="/productos?tab=productos&amp;page={{ page-1 }}{% if q %}&amp;q={{ q }}{% endif %}{% if cat_f %}&amp;categoria={{ cat_f }}{% endif %}{% if stock_bajo %}&amp;stock_bajo=1{% endif %}" style="display:inline-block;padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;background:var(--bg);color:var(--text)">&laquo; Anterior</a>{% else %}<span style="color:#ccc">&laquo; Anterior</span>{% endif %}
+  {% for p in range(1,total_pages+1) %}{% if p>=page-2 and p<=page+2 %}<a href="/productos?tab=productos&amp;page={{ p }}{% if q %}&amp;q={{ q }}{% endif %}{% if cat_f %}&amp;categoria={{ cat_f }}{% endif %}{% if stock_bajo %}&amp;stock_bajo=1{% endif %}" style="display:inline-block;padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;{% if p==page %}background:var(--primary);color:#fff;font-weight:600{% else %}background:var(--bg);color:var(--text){% endif %}">{{ p }}</a>{% endif %}{% endfor %}
+  {% if page<total_pages %}<a href="/productos?tab=productos&amp;page={{ page+1 }}{% if q %}&amp;q={{ q }}{% endif %}{% if cat_f %}&amp;categoria={{ cat_f }}{% endif %}{% if stock_bajo %}&amp;stock_bajo=1{% endif %}" style="display:inline-block;padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;background:var(--bg);color:var(--text)">Siguiente &raquo;</a>{% else %}<span style="color:#ccc">Siguiente &raquo;</span>{% endif %}
+</div>
+{% endif %}
+</div>
+
+{# TAB: SERVICIOS MEDICOS #}
+<div class="tab-content {% if tab=='servicios_medicos' %}active{% endif %}" id="tab-servicios_medicos">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+  <div><span style="color:var(--text-light);font-size:13px">{{ servicios_medicos|length }} servicio(s) m&eacute;dico(s)</span></div>
+  <button class="btn btn-primary" onclick="document.getElementById('modalServicioInv').classList.add('active')"><i class="fas fa-plus"></i> Nuevo Servicio</button>
+</div>
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr><th>ID</th><th>Nombre</th><th>Descripci&oacute;n</th><th>Precio</th><th>Tipo</th><th>Acciones</th></tr></thead>
+  <tbody>{% for s in servicios_medicos %}<tr><td>{{ s.id }}</td><td>{{ s.nombre }}</td><td>{{ s.descripcion or '-' }}</td><td>S/ {{ "%.2f"|format(s.precio|float) }}</td><td><span class="badge badge-info">{{ s.tipo }}</span></td><td><button class="btn btn-sm btn-primary" onclick="editarSM({{ s.id }},{{ s.nombre|tojson }},{{ s.descripcion|tojson }},{{ s.precio|float|tojson }},{{ s.tipo|tojson }})"><i class="fas fa-edit"></i></button><a href="/servicios/{{ s.id }}/eliminar" class="btn btn-sm btn-danger" onclick="return confirmDelete()"><i class="fas fa-trash"></i></a></td></tr>{% else %}<tr><td colspan="6"><div class="empty">No hay servicios m&eacute;dicos</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+</div>
+
+{# TAB: GROOMING #}
+<div class="tab-content {% if tab=='grooming' %}active{% endif %}" id="tab-grooming">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+  <div><span style="color:var(--text-light);font-size:13px">{{ grooming_servicios|length }} servicio(s) de grooming</span></div>
+  <button class="btn btn-primary" onclick="document.getElementById('modalGroomingInv').classList.add('active')"><i class="fas fa-plus"></i> Nuevo Servicio</button>
+</div>
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr><th>ID</th><th>Nombre</th><th>Descripci&oacute;n</th><th>Precio</th><th>Duraci&oacute;n</th><th>Tipo</th><th>Acciones</th></tr></thead>
+   <tbody id="groomingTableBody">{% for s in grooming_servicios %}<tr><td>{{ s.id }}</td><td>{{ s.nombre }}</td><td>{{ s.descripcion or '-' }}</td><td>S/ {{ "%.2f"|format(s.precio|float) }}</td><td>{{ s.duracion_minutos }} min</td><td><span class="badge badge-info">{{ s.tipo }}</span></td><td><button class="btn btn-sm btn-primary btn-edit-gs" data-id="{{ s.id }}" data-nombre="{{ s.nombre }}" data-descripcion="{{ s.descripcion or '' }}" data-precio="{{ s.precio }}" data-duracion="{{ s.duracion_minutos or '' }}" data-tipo="{{ s.tipo }}"><i class="fas fa-edit"></i></button><a href="/servicios-grooming/{{ s.id }}/eliminar" class="btn btn-sm btn-danger" onclick="return confirmDelete()"><i class="fas fa-trash"></i></a></td></tr>{% else %}<tr><td colspan="7"><div class="empty">No hay servicios de grooming</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+</div>
+
+{# MODAL: Nuevo Servicio Médico (desde Inventario) #}
+<div class="modal-overlay" id="modalServicioInv" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>Nuevo Servicio M&eacute;dico</h2>
+    <form method="POST" action="/servicios/nuevo">
+      <div class="form-group"><label>Nombre *</label><input type="text" name="nombre" required></div>
+      <div class="form-group"><label>Descripci&oacute;n</label><textarea name="descripcion" rows="2"></textarea></div>
+      <div class="form-group"><label>Precio (S/) *</label><input type="number" step="0.01" name="precio" required></div>
+      <div class="form-group"><label>Tipo</label><select name="tipo"><option value="consulta">Consulta</option><option value="cirugia">Cirug&iacute;a</option><option value="hospitalizacion">Hospitalizaci&oacute;n</option><option value="medicacion">Medicaci&oacute;n</option><option value="procedimiento">Procedimiento</option><option value="laboratorio">Laboratorio</option></select></div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-success">Guardar</button><button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').classList.remove('active')">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+{# MODAL: Editar Servicio Médico #}
+<div class="modal-overlay" id="modalEditarSM" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>Editar Servicio M&eacute;dico</h2>
+    <form method="POST" id="formEditarSM">
+      <div class="form-group"><label>Nombre *</label><input type="text" name="nombre" id="esm_nombre" required></div>
+      <div class="form-group"><label>Descripci&oacute;n</label><textarea name="descripcion" id="esm_descripcion" rows="2"></textarea></div>
+      <div class="form-group"><label>Precio (S/) *</label><input type="number" step="0.01" name="precio" id="esm_precio" required></div>
+      <div class="form-group"><label>Tipo</label><select name="tipo" id="esm_tipo"><option value="consulta">Consulta</option><option value="cirugia">Cirug&iacute;a</option><option value="hospitalizacion">Hospitalizaci&oacute;n</option><option value="medicacion">Medicaci&oacute;n</option><option value="procedimiento">Procedimiento</option><option value="laboratorio">Laboratorio</option></select></div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-success">Guardar</button><button type="button" class="btn btn-secondary" onclick="cerrarModalSM()">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+{# MODAL: Nuevo Servicio Grooming #}
+<div class="modal-overlay" id="modalGroomingInv" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>Nuevo Servicio de Grooming</h2>
+    <form method="POST" action="/servicios-grooming/nuevo">
+      <div class="form-group"><label>Nombre *</label><input type="text" name="nombre" required></div>
+      <div class="form-group"><label>Descripci&oacute;n</label><textarea name="descripcion" rows="2"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Precio (S/) *</label><input type="number" step="0.01" name="precio" required></div>
+        <div class="form-group"><label>Duraci&oacute;n (min)</label><input type="number" name="duracion_minutos" value="30"></div>
+      </div>
+      <div class="form-group"><label>Tipo</label><select id="gs_tipo_nuevo" name="tipo"><option value="Baño">Ba&ntilde;o</option><option value="Corte">Corte</option><option value="Cepillado">Cepillado</option><option value="Corte de uñas">Corte de u&ntilde;as</option><option value="Limpieza dental">Limpieza dental</option><option value="Otro">Otro</option></select><input id="gs_tipo_nuevo_custom" name="tipo" placeholder="Especificar tipo..." style="display:none;width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px"></div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-success">Guardar</button><button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').classList.remove('active')">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+{# MODAL: Editar Servicio Grooming #}
+<div class="modal-overlay" id="modalEditarGS" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h2>Editar Servicio de Grooming</h2>
+    <form method="POST" id="formEditarGS">
+      <div class="form-group"><label>Nombre *</label><input type="text" name="nombre" id="egs_nombre" required></div>
+      <div class="form-group"><label>Descripci&oacute;n</label><textarea name="descripcion" id="egs_descripcion" rows="2"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label>Precio (S/) *</label><input type="number" step="0.01" name="precio" id="egs_precio" required></div>
+        <div class="form-group"><label>Duraci&oacute;n (min)</label><input type="number" name="duracion_minutos" id="egs_duracion"></div>
+      </div>
+      <div class="form-group"><label>Tipo</label><select name="tipo" id="egs_tipo"><option value="Baño">Ba&ntilde;o</option><option value="Corte">Corte</option><option value="Cepillado">Cepillado</option><option value="Corte de uñas">Corte de u&ntilde;as</option><option value="Limpieza dental">Limpieza dental</option><option value="Otro">Otro</option></select><input id="egs_tipo_custom" name="tipo" placeholder="Especificar tipo..." style="display:none;width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px"></div>
+      <div style="display:flex;gap:8px"><button type="submit" class="btn btn-success">Guardar</button><button type="button" class="btn btn-secondary" onclick="cerrarModalGS()">Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+<script>
+initOtro('gs_tipo_nuevo','gs_tipo_nuevo_custom');
+initOtro('egs_tipo','egs_tipo_custom');
+// Servicios Médicos inline edit
+function editarSM(id,nombre,descripcion,precio,tipo){
+  document.getElementById('formEditarSM').action='/servicios/'+id+'/editar';
+  document.getElementById('esm_nombre').value=nombre;
+  document.getElementById('esm_descripcion').value=descripcion||'';
+  document.getElementById('esm_precio').value=precio;
+  document.getElementById('esm_tipo').value=tipo;
+  document.getElementById('modalEditarSM').classList.add('active');
+}
+function cerrarModalSM(){document.getElementById('modalEditarSM').classList.remove('active')}
+
+// Grooming inline edit
+document.getElementById('groomingTableBody').addEventListener('click',function(e){
+  var btn=e.target.closest('.btn-edit-gs');
+  if(!btn)return;
+  document.getElementById('formEditarGS').action='/servicios-grooming/'+btn.getAttribute('data-id')+'/editar';
+  document.getElementById('egs_nombre').value=btn.getAttribute('data-nombre');
+  document.getElementById('egs_descripcion').value=btn.getAttribute('data-descripcion');
+  document.getElementById('egs_precio').value=parseFloat(btn.getAttribute('data-precio'))||0;
+  document.getElementById('egs_duracion').value=btn.getAttribute('data-duracion');
+  document.getElementById('egs_tipo').value=btn.getAttribute('data-tipo');
+  document.getElementById('modalEditarGS').classList.add('active');
+});
+function cerrarModalGS(){document.getElementById('modalEditarGS').classList.remove('active')}
+
+// Tab highlight via URL
+(function(){
+  var params=new URLSearchParams(location.search);
+  var tab=params.get('tab')||'productos';
+  document.querySelectorAll('.tab-content').forEach(function(el){el.classList.toggle('active',el.id==='tab-'+tab)});
+})();
+// Inline stock edit
+function editarStock(el,id){
+  var cur=parseInt(el.getAttribute('data-stock'))||0;
+  var inp=document.createElement('input');
+  inp.type='number';inp.value=cur;inp.min=0;
+  inp.style='width:70px;padding:2px 4px;border:1px solid var(--primary);border-radius:4px;text-align:center;font-size:11px';
+  el.style.display='none';el.parentNode.insertBefore(inp,el);
+  inp.focus();inp.select();
+  inp.addEventListener('blur',function(){guardarStock(el,id,inp.value)});
+  inp.addEventListener('keydown',function(e){if(e.key==='Enter')inp.blur();if(e.key==='Escape')inp.remove();el.style.display='inline'});
+}
+function guardarStock(el,id,val){
+  var v=parseInt(val)||0;
+  fetch('/productos/'+id+'/stock',{
+    method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'stock='+v
+  }).then(function(r){
+    if(r.ok){
+      el.textContent=v;el.setAttribute('data-stock',v);
+      el.className='badge '+(v<=parseInt(el.closest('tr').querySelector('[data-stock-min]')?.getAttribute('data-stock-min')||5)?'badge-danger':v<=10?'badge-warning':'badge-success');
+    }
+  }).catch(function(e){console.error(e)}).finally(function(){
+    el.style.display='inline';
+    el.parentNode.querySelector('input')?.remove();
+  });
+}
+</script>
+{% endblock %}

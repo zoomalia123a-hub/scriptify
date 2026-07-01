@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Nuevo Paciente</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Segoe UI',Arial,sans-serif; background:#f0f4f8; min-height:100vh; padding:12px; padding-bottom:80px; }
+.header { background:white; border-radius:12px; box-shadow:0 1px 6px rgba(0,0,0,.08); padding:16px; margin-bottom:12px; }
+.header h1 { font-size:18px; color:#2c3e50; margin-bottom:2px; }
+.header span { color:#999; font-size:13px; }
+.card { background:white; border-radius:10px; box-shadow:0 1px 5px rgba(0,0,0,.07); padding:14px; margin-bottom:10px; }
+.card h2 { font-size:14px; color:#2c3e50; margin-bottom:8px; }
+label { display:block; font-size:12px; font-weight:bold; color:#2c3e50; margin-bottom:2px; margin-top:8px; }
+label:first-child { margin-top:0; }
+input,select,textarea { width:100%; padding:10px 12px; font-size:14px; border:1px solid #ddd; border-radius:8px; font-family:inherit; background:white; }
+textarea { resize:vertical; min-height:50px; }
+.row2 { display:flex; gap:8px; }
+.row2 > * { flex:1; min-width:0; }
+.btn { width:100%; padding:14px; font-size:16px; border:none; border-radius:10px; font-weight:bold; cursor:pointer; margin-top:10px; text-decoration:none; display:block; text-align:center; }
+.btn-primary { background:#2ecc71; color:white; }
+.btn-secondary { background:#95a5a6; color:white; }
+.btn-info { background:#3498db; color:white; }
+.btn-sm { padding:8px 14px; font-size:13px; display:inline-block; width:auto; margin-top:0; }
+.fixed-bottom { position:fixed; bottom:0; left:0; right:0; padding:12px; background:white; box-shadow:0 -2px 8px rgba(0,0,0,.1); }
+.msg-error { background:#f8d7da; color:#721c24; padding:8px 12px; border-radius:8px; font-size:13px; margin-bottom:10px; }
+.msg-ok { background:#d4edda; color:#155724; padding:8px 12px; border-radius:8px; font-size:13px; margin-bottom:10px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Nuevo Paciente</h1>
+  <span>Doctor: {{ doctor }}</span>
+</div>
+
+{% if dni_error %}
+<div class="msg-error">{{ dni_error }}</div>
+{% endif %}
+
+{% if prefill_dueno %}
+<div class="msg-ok">Datos encontrados: {{ prefill_dueno.nombre }}</div>
+{% endif %}
+
+<form method="GET" action="/nuevo_paciente_consulta" style="margin-bottom:10px">
+<div class="card" style="margin-bottom:0">
+  <h2>Buscar due&ntilde;o por DNI</h2>
+  <div style="display:flex;gap:6px;align-items:center">
+    <input name="dni" id="npDni" placeholder="DNI (8 d&iacute;gitos)" maxlength="8" style="flex:1" value="{{ prefill_dueno.dueno_dni if prefill_dueno else '' }}" inputmode="numeric" autocomplete="off" oninput="buscarDueno()" onkeyup="buscarDueno()">
+    <button type="submit" class="btn btn-sm btn-info" style="white-space:nowrap">Buscar</button>
+  </div>
+</div>
+</form>
+<div id="dniMsgWeb" style="font-size:12px;color:#999;min-height:18px;margin-bottom:6px"></div>
+
+<form method="POST" enctype="multipart/form-data">
+
+<div class="card">
+  <h2>Due&ntilde;o</h2>
+  <label>DNI</label>
+  <input name="dni" value="{{ prefill_dueno.dueno_dni if prefill_dueno else '' }}" placeholder="DNI" maxlength="8" inputmode="numeric">
+  <label>Nombre / Raz&oacute;n Social</label>
+  <input name="dueno_nombre" placeholder="Nombre completo" required value="{{ prefill_dueno.nombre if prefill_dueno else '' }}">
+  <div class="row2">
+    <div style="flex:1"><label>Tel&eacute;fono</label><input name="telefono" placeholder="999888777" value="{{ prefill_dueno.telefono if prefill_dueno else '' }}"></div>
+    <div style="flex:2"><label>Direcci&oacute;n</label><input name="direccion" placeholder="Direcci&oacute;n" value="{{ prefill_dueno.direccion if prefill_dueno else '' }}"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Paciente</h2>
+  <label>Nombre de la mascota</label>
+  <input name="nombre" placeholder="Ej: Rocky, Luna" required>
+  <div class="row2">
+    <div style="flex:1"><label>Especie</label>
+      <select id="esp_paciente" name="especie" required>
+        <option value="">-- Seleccionar --</option>
+        <option>Perro</option><option>Gato</option><option>Ave</option><option>Roedor</option><option>Conejo</option><option>Otro</option>
+      </select>
+      <input id="esp_paciente_custom" name="especie" placeholder="Especificar especie..." style="display:none;width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px">
+    </div>
+    <div style="flex:1"><label>Raza</label>
+      <input name="raza" placeholder="Ej: Labrador, Persa...">
+    </div>
+  </div>
+  <div class="row2">
+    <div style="flex:1"><label>Sexo</label>
+      <select name="sexo"><option value="">--</option><option>Macho</option><option>Hembra</option></select>
+    </div>
+    <div style="flex:1"><label>Esterilizado <span style="color:#dc3545">*</span></label>
+      <select name="esterilizado" required>
+        <option value="">-- Esterilizado --</option>
+        <option value="1">S&iacute;</option>
+        <option value="0">No</option>
+      </select>
+    </div>
+  </div>
+  <label>Foto de la mascota</label>
+  <input type="file" name="foto" accept="image/*" capture="environment" style="padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+</div>
+
+<div class="fixed-bottom">
+  <button type="submit" class="btn btn-primary">Guardar e ir a Consulta</button>
+</div>
+</form>
+<script>
+initOtro('esp_paciente','esp_paciente_custom');
+var dnTimer;
+function buscarDueno(){clearTimeout(dnTimer);dnTimer=setTimeout(function(){
+  var v=document.getElementById('npDni').value.replace(/\s/g,''),s=document.getElementById('dniMsgWeb');
+  if(v.length!=8){s.textContent='';s.style.display='none';return}
+  s.style.display='block';s.textContent='Buscando...';s.style.color='#856404';
+  var x=new XMLHttpRequest();
+  x.onreadystatechange=function(){if(x.readyState==4){
+    if(x.status!=200){s.textContent='Error de conexion';s.style.color='#721c24';return}
+    try{var d=JSON.parse(x.responseText)}catch(e){s.textContent='Error respuesta';s.style.color='#721c24';return}
+    if(d.error){s.textContent=d.error;s.style.color='#721c24';return}
+    document.querySelectorAll('form[method="GET"] input[name="dni"]')[0].value=v;
+    document.querySelectorAll('form[method="POST"] input[name="dni"]')[0].value=v;
+    document.querySelectorAll('form[method="POST"] input[name="dueno_nombre"]')[0].value=(d.nombre+' '+(d.apellido_paterno||'')+' '+(d.apellido_materno||'')).trim();
+    if(d.direccion)document.querySelectorAll('form[method="POST"] input[name="direccion"]')[0].value=d.direccion;
+    s.textContent='OK';s.style.color='#155724';
+  }};
+  x.open('GET','/api/dni/'+encodeURIComponent(v),true);
+  x.send();
+},300);}
+</script>
+</body>
+</html>

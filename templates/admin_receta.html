@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><title>Receta - {{ r.animal_nombre }}</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Courier New',monospace}
+body{padding:20px;background:#fff;color:#000}
+.receta{max-width:400px;margin:0 auto;border:2px dashed #333;padding:20px}
+h1{text-align:center;font-size:18px;margin-bottom:4px}
+.sub{text-align:center;font-size:11px;color:#555;margin-bottom:16px}
+.info{font-size:12px;margin-bottom:12px}
+.info div{margin-bottom:3px}
+.linea{border-top:1px dashed #333;margin:12px 0}
+.detalle{font-size:13px;margin-bottom:12px}
+.detalle p{margin-bottom:6px}
+.firma{text-align:center;margin-top:20px;font-size:12px}
+.firma .line{width:200px;border-top:1px solid #000;margin:30px auto 4px}
+@media print{body{padding:0}.receta{border:2px dashed #333!important}.no-print{display:none!important}}
+</style>
+</head><body>
+<div class="no-print" style="text-align:center;margin-bottom:12px">
+  <button onclick="window.print()" class="btn" style="padding:8px 16px;background:#1abc9c;color:white;border:none;border-radius:8px;cursor:pointer"><i class="fas fa-print"></i> Imprimir</button>
+  <button onclick="window.close()" style="padding:8px 16px;background:#95a5a6;color:white;border:none;border-radius:8px;cursor:pointer;margin-left:8px">Cerrar</button>
+</div>
+<div class="receta">
+<h1>SCRIPTYFY</h1>
+<div class="sub">Veterinaria - Receta M&eacute;dica</div>
+<div class="linea"></div>
+<div class="info">
+  <div><strong>Paciente:</strong> {{ r.animal_nombre }}</div>
+  <div><strong>Especie:</strong> {{ r.especie }}</div>
+  <div><strong>Edad:</strong> {{ r.edad }} a&ntilde;os</div>
+  <div><strong>Due&ntilde;o:</strong> {{ r.dueno_nombre }}</div>
+  <div><strong>Tel&eacute;fono:</strong> {{ r.telefono or '' }}</div>
+  <div><strong>Fecha:</strong> {{ r.fecha }} {{ r.hora or '' }}</div>
+  <div><strong>M&eacute;dico:</strong> {{ r.doctor or '' }}</div>
+</div>
+<div class="linea"></div>
+<div class="detalle">
+  <p><strong>Diagn&oacute;stico:</strong></p>
+  <p>{{ r.diagnostico or '' }}</p>
+</div>
+<div class="detalle">
+  <p><strong>Tratamiento:</strong></p>
+  <p>{{ r.tratamiento or '' }}</p>
+</div>
+{% if r.observaciones %}
+<div class="detalle">
+  <p><strong>Observaciones:</strong></p>
+  <p>{{ r.observaciones }}</p>
+</div>
+{% endif %}
+<div class="linea"></div>
+<div class="firma">
+  <div class="line"></div>
+  <div>Firma del M&eacute;dico</div>
+</div>
+</div>
+</body></html>

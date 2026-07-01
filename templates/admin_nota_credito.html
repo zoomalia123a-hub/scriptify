@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><title>Nota de Crédito {{ nc.serie }}-{{ '%05d'|format(nc.numero|int) }}</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Courier New',monospace}
+body{padding:20px;background:#f0f0f0;color:#000}
+.ticket{max-width:340px;margin:0 auto;background:#fff;padding:24px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+h1{text-align:center;font-size:18px;margin-bottom:2px}
+.sub{text-align:center;font-size:10px;color:#c0392b;margin-bottom:12px;font-weight:700}
+.linea{border-top:1px dashed #333;margin:8px 0}
+.info{font-size:11px;margin-bottom:8px}
+.info div{margin-bottom:3px}
+table{width:100%;font-size:11px;border-collapse:collapse}
+th,td{text-align:left;padding:4px 2px}
+th{font-size:10px;text-transform:uppercase;border-bottom:1px solid #ddd}
+.total{text-align:right;font-size:16px;font-weight:700;margin-top:8px;color:#c0392b}
+.pie{text-align:center;font-size:10px;color:#666;margin-top:16px}
+.actions{max-width:340px;margin:12px auto 0;display:flex;gap:8px;flex-wrap:wrap}
+.actions button,.actions a{flex:1;padding:12px;font-size:13px;font-weight:600;border:none;border-radius:8px;cursor:pointer;text-decoration:none;text-align:center;min-width:100px}
+.btn-print{background:#1abc9c;color:#fff}
+.btn-back{background:#95a5a6;color:#fff}
+.firma{text-align:center;font-size:10px;color:#666;margin-top:16px;padding-top:12px;border-top:1px dashed #333}
+@media print{
+  @page{width:80mm;margin:0}
+  body{background:#fff;padding:5px;font-size:9px}
+  .ticket{max-width:80mm;box-shadow:none;border:none;border-radius:0;padding:10px;background:#fff}
+  .actions{display:none!important}
+  *{background:transparent!important;color:#000!important;box-shadow:none!important}
+  .linea{border-top:1px dashed #000!important}
+}
+</style>
+</head><body>
+<div class="actions">
+  <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+  <a class="btn-back" href="/ventas/{{ nc.id_venta }}"><i class="fas fa-arrow-left"></i> Volver a Venta</a>
+</div>
+<div class="ticket">
+<h1>SCRIPTYFY</h1>
+<div class="sub">NOTA DE CR&Eacute;DITO ELECTR&Oacute;NICA</div>
+<div class="linea"></div>
+<div class="info">
+  <div style="text-align:center;font-size:14px;font-weight:700;margin-bottom:8px;color:#c0392b">{{ nc.serie }}-{{ '%05d'|format(nc.numero|int) }}</div>
+  <div style="text-align:center;font-size:10px;margin-bottom:8px">Documento que anula la {{ nc.tipo_comprobante or 'venta' }}</div>
+  <div>Fecha Emisi&oacute;n: {{ nc.fecha }}</div>
+  <div>Motivo: {{ nc.motivo }}</div>
+  {% if nc.cliente_dni %}<div>DNI/RUC: {{ nc.cliente_dni }}</div>{% endif %}
+  {% if nc.cliente_nombre %}<div>Cliente: {{ nc.cliente_nombre }}</div>{% endif %}
+</div>
+<div class="linea"></div>
+<div style="text-align:center;font-size:10px;margin-bottom:4px;color:#c0392b">ITEMS ANULADOS</div>
+<table><thead><tr><th>Item</th><th style="text-align:center">Cant</th><th style="text-align:right">P.Unit</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>
+{% for it in items %}<tr>
+  <td>{{ it.nombre }}</td>
+  <td style="text-align:center">{{ it.cantidad }}</td>
+  <td style="text-align:right">S/ {{ "%.2f"|format(it.precio_unitario|float) }}</td>
+  <td style="text-align:right">-S/ {{ "%.2f"|format(it.subtotal|float) }}</td>
+</tr>{% endfor %}
+</tbody></table>
+<div class="linea"></div>
+<div class="info" style="font-size:11px">
+  <div style="display:flex;justify-content:space-between"><span>Subtotal:</span><span>-S/ {{ "%.2f"|format(nc.subtotal|float) }}</span></div>
+  {% if nc.igv|float > 0 %}<div style="display:flex;justify-content:space-between"><span>IGV (18%):</span><span>-S/ {{ "%.2f"|format(nc.igv|float) }}</span></div>{% endif %}
+</div>
+<div class="linea"></div>
+<div class="total">TOTAL: -S/ {{ "%.2f"|format(nc.total|float) }}</div>
+<div class="firma">
+  <div>___________________________</div>
+  <div>Firma / Sello</div>
+</div>
+<div class="pie">
+  <div>Documento Electr&oacute;nico</div>
+  <div style="font-size:9px;margin-top:4px">SCRIPTYFY V.02</div>
+</div>
+</div>
+</body></html>
