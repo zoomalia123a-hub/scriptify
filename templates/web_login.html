@@ -2,66 +2,60 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SCRIPTYFY - Acceso</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
-* { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'Segoe UI',Arial,sans-serif; background:#1a1a2e; display:flex; min-height:100vh; align-items:center; justify-content:center; padding:16px; }
-.card { background:white; border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,.3); padding:32px; width:100%; max-width:400px; }
-h1 { font-size:22px; color:#2c3e50; margin-bottom:4px; text-align:center; }
-.sub { color:#7f8c8d; font-size:13px; text-align:center; margin-bottom:20px; }
-.logo { text-align:center; margin-bottom:16px; font-size:40px; }
-select,input { width:100%; padding:14px; font-size:15px; border-radius:8px; margin-bottom:12px; border:1px solid #ddd; }
-select { background:white; }
-.btn { width:100%; padding:14px; font-size:15px; border-radius:8px; border:none; font-weight:bold; cursor:pointer; color:white; }
-.btn-primary { background:#1abc9c; }
-.btn-primary:hover { background:#16a085; }
-.btn-outline { background:transparent; color:#7f8c8d; border:1px solid #ddd; margin-top:4px; }
-.btn-outline:hover { background:#f5f5f5; }
-.error { color:#e74c3c; font-size:13px; text-align:center; margin-bottom:10px; }
-.tabs { display:flex; margin-bottom:20px; border-radius:8px; overflow:hidden; border:1px solid #ddd; }
-.tab { flex:1; padding:10px; text-align:center; cursor:pointer; font-size:13px; background:white; transition:all .2s; }
-.tab.active { background:#1abc9c; color:white; border-color:#1abc9c; }
-.tab-content { display:none; }
-.tab-content.active { display:block; }
+body{background:#1a1a2e;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+.card-login{background:rgba(255,255,255,.95);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.4);padding:28px 24px;width:100%;max-width:400px;backdrop-filter:blur(4px)}
+.logo{font-size:40px;text-align:center;margin-bottom:8px}
+.card-login h1{font-size:22px;color:#2c3e50;text-align:center;margin-bottom:2px}
+.card-login .sub{color:#7f8c8d;font-size:13px;text-align:center;margin-bottom:16px}
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="logo">🐾</div>
+<div class="card-login">
+  <div class="logo">&#128054;</div>
   <h1>SCRIPTYFY</h1>
-  <div class="sub">Sistema de Gesti\u00f3n Veterinaria</div>
-  <div class="tabs">
-    <div class="tab active" onclick="switchTab('doctor')">Doctor</div>
-    <div class="tab" onclick="switchTab('admin')">Admin</div>
-  </div>
-  {% if error %}<div class="error">{{ error }}</div>{% endif %}
-  <div id="tab-doctor" class="tab-content active">
-    <form method="POST" action="/login">
-      <select name="doctor" required>
-        <option value="">Selecciona tu nombre...</option>
-        {% for d in doctores %}
-        <option value="{{ d }}">{{ d }}</option>
-        {% endfor %}
-      </select>
-      <button class="btn btn-primary" type="submit">Ingresar como Doctor</button>
-    </form>
-  </div>
-  <div id="tab-admin" class="tab-content">
-    <form method="POST" action="/admin_login">
-      <input name="username" placeholder="Usuario" required>
-      <input name="password" type="password" placeholder="Contrase\u00f1a" required>
-      <button class="btn btn-primary" type="submit">Ingresar como Admin</button>
-    </form>
+  <div class="sub">Sistema de Gesti&oacute;n Veterinaria</div>
+  <ul class="nav nav-pills nav-fill mb-3 border rounded overflow-hidden" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active rounded-0 fw-semibold" style="color:#1abc9c" id="tab-doctor-btn" data-bs-toggle="pill" data-bs-target="#tab-doctor" type="button" role="tab">Doctor</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link rounded-0 fw-semibold" style="color:#1abc9c" id="tab-admin-btn" data-bs-toggle="pill" data-bs-target="#tab-admin" type="button" role="tab">Admin</button>
+    </li>
+  </ul>
+  {% if error %}<div class="alert alert-danger py-2 small text-center mb-3">{{ error }}</div>{% endif %}
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="tab-doctor" role="tabpanel">
+      <form method="POST" action="/login">
+        <select name="doctor" required class="form-select mb-3">
+          <option value="">Selecciona tu nombre...</option>
+          {% for d in doctores %}
+          <option value="{{ d }}">{{ d }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn w-100 py-2 fw-bold text-white border-0" style="background:#1abc9c" type="submit">Ingresar como Doctor</button>
+      </form>
+    </div>
+    <div class="tab-pane fade" id="tab-admin" role="tabpanel">
+      <form method="POST" action="/admin_login">
+        <div class="mb-3">
+          <input name="username" placeholder="Usuario" required class="form-control">
+        </div>
+        <div class="mb-3">
+          <input name="password" type="password" placeholder="Contrase&ntilde;a" required class="form-control">
+        </div>
+        <button class="btn w-100 py-2 fw-bold text-white border-0" style="background:#1abc9c" type="submit">Ingresar como Admin</button>
+      </form>
+    </div>
   </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-function switchTab(tab){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
-  if(tab=='doctor'){ document.querySelectorAll('.tab')[0].classList.add('active'); document.getElementById('tab-doctor').classList.add('active'); }
-  else { document.querySelectorAll('.tab')[1].classList.add('active'); document.getElementById('tab-admin').classList.add('active'); }
-}
+document.getElementById('tab-doctor-btn').addEventListener('click',function(){this.style.color='#fff';document.getElementById('tab-admin-btn').style.color='#1abc9c'});
+document.getElementById('tab-admin-btn').addEventListener('click',function(){this.style.color='#fff';document.getElementById('tab-doctor-btn').style.color='#1abc9c'});
 </script>
 </body>
 </html>

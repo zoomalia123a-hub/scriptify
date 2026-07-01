@@ -1,39 +1,48 @@
 {% extends "web_base.html" %}
 {% block content %}
-<div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-    <h2>{{ animal.nombre }}</h2>
-    <div>
-      <a href="/animales/{{ animal.id }}/editar" class="btn btn-sm btn-warning">Editar</a>
-      <a href="/consulta/{{ animal.id }}" class="btn btn-sm btn-primary">Nueva Consulta</a>
+<div class="card shadow-sm border-0 rounded-3 mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <h5 class="card-title mb-0 fw-bold">{{ animal.nombre }}</h5>
+      <div class="d-flex gap-2">
+        <a href="/animales/{{ animal.id }}/editar" class="btn btn-sm btn-outline-warning">Editar</a>
+        <a href="/consulta/{{ animal.id }}" class="btn btn-sm btn-success" style="background:#1abc9c;border-color:#1abc9c">Nueva Consulta</a>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0 small">
+        <tbody>
+          <tr><th class="text-muted" style="width:100px">Especie</th><td>{{ animal.especie or '' }}</td><th class="text-muted" style="width:100px">Raza</th><td>{{ animal.raza or '' }}</td></tr>
+          <tr><th class="text-muted">Edad</th><td>{{ animal.edad or '' }}</td><th class="text-muted">Peso</th><td>{{ animal.peso or '' }}</td></tr>
+          <tr><th class="text-muted">Sexo</th><td>{{ animal.sexo or '' }}</td><th class="text-muted">Color</th><td>{{ animal.color or '' }}</td></tr>
+          <tr><th class="text-muted">Due&ntilde;o</th><td>{{ animal.dueno_nombre }}</td><th class="text-muted">Tel&eacute;fono</th><td>{{ animal.dueno_telefono or '' }}</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
-  <table>
-    <tr><th>Especie</th><td>{{ animal.especie or '' }}</td><th>Raza</th><td>{{ animal.raza or '' }}</td></tr>
-    <tr><th>Edad</th><td>{{ animal.edad or '' }}</td><th>Peso</th><td>{{ animal.peso or '' }}</td></tr>
-    <tr><th>Sexo</th><td>{{ animal.sexo or '' }}</td><th>Color</th><td>{{ animal.color or '' }}</td></tr>
-    <tr><th>Due\u00f1o</th><td>{{ animal.dueno_nombre }}</td><th>Tel\u00e9fono</th><td>{{ animal.dueno_telefono or '' }}</td></tr>
-  </table>
 </div>
-
-<div class="card">
-  <h2>Historial M\u00e9dico</h2>
-  {% if historial %}
-  <table>
-    <thead>
-      <tr><th>Fecha</th><th>Diagn\u00f3stico</th><th>Tratamiento</th><th>Doctor</th></tr>
-    </thead>
-    <tbody>
-      {% for r in historial %}
-      <tr>
-        <td>{{ r.fecha }}</td>
-        <td>{{ r.diagnostico }}</td>
-        <td>{{ r.tratamiento }}</td>
-        <td>{{ r.doctor or '' }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}<div class="empty">Sin historial m\u00e9dico</div>{% endif %}
+<div class="card shadow-sm border-0 rounded-3">
+  <div class="card-body">
+    <h5 class="card-title fw-bold mb-3">Historial M&eacute;dico</h5>
+    {% if historial %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 small">
+        <thead class="table-light">
+          <tr><th>Fecha</th><th>Diagn&oacute;stico</th><th class="d-none d-md-table-cell">Tratamiento</th><th>Doctor</th></tr>
+        </thead>
+        <tbody>
+          {% for r in historial %}
+          <tr>
+            <td>{{ r.fecha }}</td>
+            <td>{{ r.diagnostico }}</td>
+            <td class="d-none d-md-table-cell">{{ r.tratamiento }}</td>
+            <td>{{ r.doctor or '' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<div class="empty mb-0">Sin historial m&eacute;dico</div>{% endif %}
+  </div>
 </div>
 {% endblock %}

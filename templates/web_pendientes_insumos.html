@@ -2,54 +2,50 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pendientes de Insumos</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
-* { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'Segoe UI',Arial,sans-serif; background:#f0f4f8; min-height:100vh; padding:12px; }
-.header { background:white; border-radius:10px; box-shadow:0 1px 5px rgba(0,0,0,.07); padding:14px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; }
-.header h1 { font-size:16px; color:#2c3e50; }
-.header span { color:#999; font-size:12px; }
-.card { background:white; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,.06); padding:12px 14px; margin-bottom:6px; }
-.card .nombre { font-size:14px; font-weight:bold; color:#2c3e50; }
-.card .detalle { font-size:12px; color:#7f8c8d; margin-top:3px; }
-.card .accion { margin-top:6px; }
-.btn { display:inline-block; padding:7px 14px; font-size:12px; border-radius:6px; font-weight:bold; cursor:pointer; text-decoration:none; border:none; }
-.btn-primary { background:#e67e22; color:white; }
-.btn-success { background:#2ecc71; color:white; margin-right:4px; }
-.btn-secondary { background:#95a5a6; color:white; text-decoration:none; display:block; text-align:center; padding:11px; border-radius:8px; font-size:13px; margin-top:8px; }
-.empty { text-align:center; color:#999; font-size:13px; padding:30px 0; }
-.badge { display:inline-block; background:#27ae60; color:white; font-size:10px; padding:1px 6px; border-radius:6px; }
+body{background:#f0f4f8;min-height:100vh;padding:12px;font-family:'Segoe UI',Arial,sans-serif}
+.card-insumo{background:white;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);padding:12px 14px;margin-bottom:6px}
+.card-insumo .nombre{font-size:14px;font-weight:700;color:#2c3e50}
+.card-insumo .detalle{font-size:12px;color:#7f8c8d;margin-top:3px}
+.card-insumo .accion{margin-top:6px}
 </style>
 </head>
 <body>
-<div class="header">
-  <div><h1>Insumos Pendientes</h1><span>{{ registros|length }} consulta(s) - {{ hoy }}</span></div>
-  <a href="/logout" style="background:#c0392b;color:white;padding:7px 12px;border-radius:6px;font-size:12px;text-decoration:none;">Salir</a>
-</div>
-
-{% if request.args.get('ok') %}
-<div style="background:#d4edda;color:#155724;padding:10px;border-radius:8px;margin-bottom:8px;font-size:13px;text-align:center;">Insumos guardados correctamente</div>
-{% endif %}
-
-{% for r in registros %}
-<div class="card">
-  <div class="nombre">{{ r.animal_nombre }}</div>
-  <div class="detalle">Dueno: {{ r.dueno_nombre }} | {{ r.fecha }} {{ r.hora or '' }}</div>
-  <div class="detalle">Diagnostico: {{ r.diagnostico or '' }}</div>
-  <div class="accion">
-    {% if r.insumos_count > 0 %}
-    <span class="badge">{{ r.insumos_count }} insumo(s) registrado(s)</span>
-    <a href="/agregar_insumos/{{ r.id }}" class="btn btn-primary">+ Agregar mas</a>
-    {% else %}
-    <a href="/agregar_insumos/{{ r.id }}" class="btn btn-success">+ Agregar Insumos</a>
-    {% endif %}
+<div class="container-fluid px-0" style="max-width:600px;margin:0 auto">
+  <div class="bg-white rounded-3 shadow-sm p-3 mb-3 d-flex justify-content-between align-items-center">
+    <div>
+      <h5 class="mb-0 fw-bold">Insumos Pendientes</h5>
+      <small class="text-muted">{{ registros|length }} consulta(s) - {{ hoy }}</small>
+    </div>
+    <a href="/logout" class="btn btn-sm text-white" style="background:#c0392b">Salir</a>
   </div>
-</div>
-{% else %}
-<div class="empty">No hay consultas pendientes de insumos hoy</div>
-{% endfor %}
 
-<a href="/pacientes" class="btn-secondary">Volver a pacientes</a>
+  {% if request.args.get('ok') %}
+  <div class="alert alert-success py-2 small text-center">Insumos guardados correctamente</div>
+  {% endif %}
+
+  {% for r in registros %}
+  <div class="card-insumo">
+    <div class="nombre">{{ r.animal_nombre }}</div>
+    <div class="detalle">Due&ntilde;o: {{ r.dueno_nombre }} | {{ r.fecha }} {{ r.hora or '' }}</div>
+    <div class="detalle">Diagn&oacute;stico: {{ r.diagnostico or '' }}</div>
+    <div class="accion">
+      {% if r.insumos_count > 0 %}
+      <span class="badge bg-success me-1">{{ r.insumos_count }} insumo(s) registrado(s)</span>
+      <a href="/agregar_insumos/{{ r.id }}" class="btn btn-sm text-white" style="background:#e67e22">+ Agregar m&aacute;s</a>
+      {% else %}
+      <a href="/agregar_insumos/{{ r.id }}" class="btn btn-sm text-white" style="background:#2ecc71">+ Agregar Insumos</a>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="text-center text-muted py-4 small">No hay consultas pendientes de insumos hoy</div>
+  {% endfor %}
+
+  <a href="/pacientes" class="btn btn-outline-secondary w-100 mt-2">&larr; Volver a pacientes</a>
+</div>
 </body>
 </html>

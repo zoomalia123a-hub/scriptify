@@ -2,60 +2,53 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agregar Insumos</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
-* { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'Segoe UI',Arial,sans-serif; background:#f0f4f8; min-height:100vh; padding:12px; }
-h1 { font-size:17px; color:#2c3e50; margin-bottom:3px; }
-h2 { font-size:14px; color:#2c3e50; margin-bottom:8px; }
-.sub { color:#7f8c8d; font-size:12px; margin-bottom:12px; }
-.card { background:white; border-radius:10px; box-shadow:0 1px 5px rgba(0,0,0,.07); padding:14px; margin-bottom:8px; }
-label { display:block; font-size:12px; font-weight:bold; color:#2c3e50; margin-bottom:2px; margin-top:6px; }
-select,input { width:100%; padding:9px 10px; font-size:13px; border:1px solid #ddd; border-radius:6px; font-family:inherit; background:white; }
-.btn { width:100%; padding:12px; font-size:14px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; margin-top:10px; }
-.btn-primary { background:#e67e22; color:white; }
-.btn-primary:hover { background:#d35400; }
-.btn-secondary { background:#95a5a6; color:white; text-decoration:none; display:block; text-align:center; padding:11px; border-radius:8px; font-size:13px; margin-top:6px; }
-.btn-outline { background:none; border:1px solid #3498db; color:#3498db; border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; width:auto; margin-top:4px; }
-.item-row { display:flex; align-items:center; gap:6px; margin:4px 0; }
-.item-row select { flex:1; }
-.item-row .cant { width:65px; flex:none; }
-.info-row { display:flex; justify-content:space-between; font-size:13px; color:#555; margin:3px 0; }
+body{background:#f0f4f8;min-height:100vh;padding:12px;font-family:'Segoe UI',Arial,sans-serif}
 </style>
 </head>
 <body>
-<div class="card">
-<h1>Agregar Insumos</h1>
-<div class="sub">
-  Paciente: <strong>{{ registro.animal_nombre }}</strong> |
-  Dueno: {{ registro.dueno_nombre }} |
-  Fecha: {{ registro.fecha }} {{ registro.hora or '' }}
-</div>
-<div class="info-row"><span>Diagnostico:</span><span>{{ registro.diagnostico or '' }}</span></div>
-
-<form method="POST" action="/guardar_insumos/{{ registro.id }}">
-<div id="insumosContainer">
-  <div class="item-row">
-    <select name="insumo_id">
-      <option value="">-- Seleccionar --</option>
-      {% for p in productos %}
-      <option value="{{ p.id }}">{{ p.nombre }} (stock: {{ p.stock }})</option>
-      {% endfor %}
-    </select>
-    <input type="number" name="insumo_cant" class="cant" placeholder="Cant" min="1" value="1">
+<div class="container-fluid px-0" style="max-width:600px;margin:0 auto">
+  <div class="card shadow-sm border-0 rounded-3">
+    <div class="card-body">
+      <h5 class="fw-bold mb-1">Agregar Insumos</h5>
+      <div class="text-muted small mb-2">
+        Paciente: <strong>{{ registro.animal_nombre }}</strong> |
+        Due&ntilde;o: {{ registro.dueno_nombre }} |
+        Fecha: {{ registro.fecha }} {{ registro.hora or '' }}
+      </div>
+      <div class="d-flex justify-content-between small text-muted mb-2">
+        <span>Diagn&oacute;stico:</span><span>{{ registro.diagnostico or '' }}</span>
+      </div>
+      <form method="POST" action="/guardar_insumos/{{ registro.id }}">
+        <div id="insumosContainer">
+          <div class="row g-2 mb-2 align-items-center">
+            <div class="col-8">
+              <select name="insumo_id" class="form-select form-select-sm">
+                <option value="">-- Seleccionar --</option>
+                {% for p in productos %}
+                <option value="{{ p.id }}">{{ p.nombre }} (stock: {{ p.stock }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-4">
+              <input type="number" name="insumo_cant" class="form-control form-control-sm" placeholder="Cant" min="1" value="1">
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-outline-primary btn-sm w-100 mb-2" onclick="agregar()">+ Agregar otro</button>
+        <button class="btn w-100 py-2 fw-bold text-white border-0 mb-1" style="background:#e67e22" type="submit">Guardar Insumos</button>
+        <a href="/pendientes_insumos" class="btn btn-outline-secondary w-100">Volver a pendientes</a>
+      </form>
+    </div>
   </div>
 </div>
-<button type="button" class="btn-outline" onclick="agregar()">+ Agregar otro</button>
-<button class="btn btn-primary" type="submit">Guardar Insumos</button>
-<a href="/pendientes_insumos" class="btn-secondary">Volver a pendientes</a>
-</form>
-</div>
-
 <script>
 function agregar(){
   var c=document.getElementById('insumosContainer');
-  var t=c.querySelector('.item-row');
+  var t=c.querySelector('.row');
   var cl=t.cloneNode(true);
   cl.querySelector('select').value='';
   cl.querySelector('input').value='1';

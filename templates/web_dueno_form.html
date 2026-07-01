@@ -1,34 +1,40 @@
 {% extends "web_base.html" %}
 {% block content %}
-<div class="card" style="max-width:600px;margin:0 auto">
-  <h2>{% if dueno %}Editar Due\u00f1o{% else %}Nuevo Due\u00f1o{% endif %}</h2>
-  <form method="POST">
-    <div class="form-group">
-      <label>Nombre</label>
-      <input name="nombre" value="{{ dueno.nombre if dueno else '' }}" required>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>DNI</label>
-        <input name="dni" value="{{ dueno.dni if dueno else '' }}">
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-md-8 col-12">
+    <div class="card shadow-sm border-0 rounded-3">
+      <div class="card-body">
+        <h5 class="card-title fw-bold mb-3">{% if dueno %}Editar Due&ntilde;o{% else %}Nuevo Due&ntilde;o{% endif %}</h5>
+        <form method="POST">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-muted">Nombre</label>
+            <input name="nombre" value="{{ dueno.nombre if dueno else '' }}" required class="form-control">
+          </div>
+          <div class="row g-2">
+            <div class="col-md-6 mb-3">
+              <label class="form-label small fw-semibold text-muted">DNI</label>
+              <input name="dni" value="{{ dueno.dni if dueno else '' }}" class="form-control">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label small fw-semibold text-muted">Tel&eacute;fono</label>
+              <input name="telefono" value="{{ dueno.telefono if dueno else '' }}" class="form-control">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-muted">Email</label>
+            <input name="email" type="email" value="{{ dueno.email if dueno else '' }}" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-muted">Direcci&oacute;n</label>
+            <input name="direccion" value="{{ dueno.direccion if dueno else '' }}" class="form-control">
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success">Guardar</button>
+            <a href="/duenos" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
       </div>
-      <div class="form-group">
-        <label>Tel\u00e9fono</label>
-        <input name="telefono" value="{{ dueno.telefono if dueno else '' }}">
-      </div>
     </div>
-    <div class="form-group">
-      <label>Email</label>
-      <input name="email" type="email" value="{{ dueno.email if dueno else '' }}">
-    </div>
-    <div class="form-group">
-      <label>Direcci\u00f3n</label>
-      <input name="direccion" value="{{ dueno.direccion if dueno else '' }}">
-    </div>
-    <div style="display:flex;gap:8px;margin-top:16px">
-      <button type="submit" class="btn btn-primary">Guardar</button>
-      <a href="/duenos" class="btn btn-secondary">Cancelar</a>
-    </div>
-  </form>
+  </div>
 </div>
 {% endblock %}

@@ -1,31 +1,35 @@
 {% extends "web_base.html" %}
 {% block content %}
-<div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-    <h2>Due\u00f1os</h2>
-    <a href="/duenos/nuevo" class="btn btn-primary">+ Nuevo Due\u00f1o</a>
+<div class="card shadow-sm border-0 rounded-3 mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <h5 class="card-title mb-0 fw-bold">Due&ntilde;os</h5>
+      <a href="/duenos/nuevo" class="btn btn-success btn-sm">+ Nuevo Due&ntilde;o</a>
+    </div>
+    {% if duenos %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 small">
+        <thead class="table-light">
+          <tr><th>ID</th><th>DNI</th><th>Nombre</th><th class="d-none d-md-table-cell">Tel&eacute;fono</th><th class="d-none d-md-table-cell">Email</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+          {% for d in duenos %}
+          <tr>
+            <td>{{ d.id }}</td>
+            <td>{{ d.dni or '' }}</td>
+            <td class="fw-semibold">{{ d.nombre }}</td>
+            <td class="d-none d-md-table-cell">{{ d.telefono or '' }}</td>
+            <td class="d-none d-md-table-cell">{{ d.email or '' }}</td>
+            <td>
+              <a href="/duenos/{{ d.id }}/editar" class="btn btn-sm btn-outline-primary">Editar</a>
+              <a href="/duenos/{{ d.id }}/eliminar" class="btn btn-sm btn-outline-danger" onclick="return confirm('Eliminar?')">Eliminar</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<div class="empty mb-0">No hay due&ntilde;os registrados</div>{% endif %}
   </div>
-  {% if duenos %}
-  <table>
-    <thead>
-      <tr><th>ID</th><th>DNI</th><th>Nombre</th><th>Tel\u00e9fono</th><th>Email</th><th>Acciones</th></tr>
-    </thead>
-    <tbody>
-      {% for d in duenos %}
-      <tr>
-        <td>{{ d.id }}</td>
-        <td>{{ d.dni or '' }}</td>
-        <td>{{ d.nombre }}</td>
-        <td>{{ d.telefono or '' }}</td>
-        <td>{{ d.email or '' }}</td>
-        <td>
-          <a href="/duenos/{{ d.id }}/editar" class="btn btn-sm btn-info">Editar</a>
-          <a href="/duenos/{{ d.id }}/eliminar" class="btn btn-sm btn-danger" onclick="return confirm('Eliminar?')">Eliminar</a>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}<div class="empty">No hay due\u00f1os registrados</div>{% endif %}
 </div>
 {% endblock %}

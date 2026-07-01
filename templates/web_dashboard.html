@@ -1,32 +1,47 @@
 {% extends "web_base.html" %}
 {% block content %}
-<div class="stats">
-  <div class="stat-card">
-    <div class="icon">👤</div>
-    <div class="num">{{ total_duenos }}</div>
-    <div class="label">Due\u00f1os</div>
+<div class="row g-3 mb-4">
+  <div class="col-lg-3 col-6">
+    <div class="stat-card">
+      <div class="icon">&#128100;</div>
+      <div class="num">{{ total_duenos }}</div>
+      <div class="label">Due&ntilde;os</div>
+    </div>
   </div>
-  <div class="stat-card">
-    <div class="icon">🐾</div>
-    <div class="num">{{ total_animales }}</div>
-    <div class="label">Pacientes</div>
+  <div class="col-lg-3 col-6">
+    <div class="stat-card">
+      <div class="icon">&#128054;</div>
+      <div class="num">{{ total_animales }}</div>
+      <div class="label">Pacientes</div>
+    </div>
   </div>
-  <div class="stat-card">
-    <div class="icon">📅</div>
-    <div class="num">{{ citas_hoy }}</div>
-    <div class="label">Citas Hoy</div>
+  <div class="col-lg-3 col-6">
+    <div class="stat-card">
+      <div class="icon">&#128197;</div>
+      <div class="num">{{ citas_hoy }}</div>
+      <div class="label">Citas Hoy</div>
+    </div>
   </div>
-  <div class="stat-card">
-    <div class="icon">🩺</div>
-    <div class="num">{{ consultas_hoy }}</div>
-    <div class="label">Consultas Hoy</div>
+  <div class="col-lg-3 col-6">
+    <div class="stat-card">
+      <div class="icon">&#128137;</div>
+      <div class="num">{{ consultas_hoy }}</div>
+      <div class="label">Consultas Hoy</div>
+    </div>
   </div>
 </div>
-
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-  <a href="/pacientes" class="btn btn-primary" style="text-align:center;padding:20px;font-size:16px">👨‍⚕️ Atenci\u00f3n M\u00e9dica</a>
-  <a href="/cobros" class="btn btn-warning" style="text-align:center;padding:20px;font-size:16px">💰 Cobros Pendientes</a>
-  <a href="/mis_consultas" class="btn btn-info" style="text-align:center;padding:20px;font-size:16px">📋 Mis Consultas</a>
-  <a href="/duenos" class="btn btn-secondary" style="text-align:center;padding:20px;font-size:16px">👥 Registrar Due\u00f1o</a>
+<div class="row g-3">
+  <div class="col-md-6 col-12">
+    <a href="/pacientes" class="btn btn-primary w-100 py-3 fs-5 fw-bold border-0" style="background:#1abc9c">&#128104;&#8205;&#127973; Atenci&oacute;n M&eacute;dica</a>
+  </div>
+  <div class="col-md-6 col-12">
+    <a href="/cobros" class="btn w-100 py-3 fs-5 fw-bold border-0 text-white" style="background:#f39c12">&#128176; Cobros Pendientes</a>
+  </div>
+  <div class="col-md-6 col-12">
+    <a href="/mis_consultas" class="btn w-100 py-3 fs-5 fw-bold border-0 text-white" style="background:#3498db">&#128203; Mis Consultas</a>
+  </div>
+  <div class="col-md-6 col-12">
+    <a href="/duenos" class="btn w-100 py-3 fs-5 fw-bold border-0 text-white" style="background:#95a5a6">&#128101; Registrar Due&ntilde;o</a>
+  </div>
 </div>
 {% endblock %}

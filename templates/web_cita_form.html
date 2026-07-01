@@ -1,47 +1,53 @@
 {% extends "web_base.html" %}
 {% block content %}
-<div class="card" style="max-width:600px;margin:0 auto">
-  <h2>Nueva Cita</h2>
-  <form method="POST">
-    <div class="form-group">
-      <label>Paciente</label>
-      <select name="id_animal" required>
-        {% for a in animales %}
-        <option value="{{ a.id }}" data-dueno="{{ a.id_dueno }}">{{ a.nombre }} ({{ a.dueno_nombre }})</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="form-group">
-      <label>ID Due\u00f1o</label>
-      <input name="id_dueno" id="id_dueno" readonly required style="background:#f5f5f5">
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Fecha</label>
-        <input name="fecha" type="date" value="{{ hoy }}" required>
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-md-8 col-12">
+    <div class="card shadow-sm border-0 rounded-3">
+      <div class="card-body">
+        <h5 class="card-title fw-bold mb-3">Nueva Cita</h5>
+        <form method="POST">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-muted">Paciente</label>
+            <select name="id_animal" required class="form-select">
+              {% for a in animales %}
+              <option value="{{ a.id }}" data-dueno="{{ a.id_dueno }}">{{ a.nombre }} ({{ a.dueno_nombre }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-muted">ID Due&ntilde;o</label>
+            <input name="id_dueno" id="id_dueno" readonly required class="form-control bg-light" style="cursor:not-allowed">
+          </div>
+          <div class="row g-2">
+            <div class="col-md-6 mb-3">
+              <label class="form-label small fw-semibold text-muted">Fecha</label>
+              <input name="fecha" type="date" value="{{ hoy }}" required class="form-control">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label small fw-semibold text-muted">Tipo</label>
+              <select name="tipo" class="form-select">
+                <option value="veterinaria">Veterinaria</option>
+                <option value="grooming">Grooming</option>
+                <option value="cirugia">Cirug&iacute;a</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-muted">Motivo</label>
+            <textarea name="motivo" rows="3" required class="form-control"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-muted">Precio (S/)</label>
+            <input name="precio" type="number" step="0.01" value="0" class="form-control">
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success">Guardar</button>
+            <a href="/citas" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
       </div>
-      <div class="form-group">
-        <label>Tipo</label>
-        <select name="tipo">
-          <option value="veterinaria">Veterinaria</option>
-          <option value="grooming">Grooming</option>
-          <option value="cirugia">Cirug\u00eda</option>
-        </select>
-      </div>
     </div>
-    <div class="form-group">
-      <label>Motivo</label>
-      <textarea name="motivo" rows="3" required></textarea>
-    </div>
-    <div class="form-group">
-      <label>Precio (S/)</label>
-      <input name="precio" type="number" step="0.01" value="0">
-    </div>
-    <div style="display:flex;gap:8px;margin-top:16px">
-      <button type="submit" class="btn btn-primary">Guardar</button>
-      <a href="/citas" class="btn btn-secondary">Cancelar</a>
-    </div>
-  </form>
+  </div>
 </div>
 <script>
 document.querySelector('[name="id_animal"]').addEventListener('change', function(){

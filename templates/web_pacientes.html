@@ -2,45 +2,43 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pacientes</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
-* { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'Segoe UI',Arial,sans-serif; background:#f0f4f8; min-height:100vh; padding:12px; }
-.header { background:white; border-radius:12px; box-shadow:0 1px 6px rgba(0,0,0,.08); padding:16px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; }
-.header h1 { font-size:18px; color:#2c3e50; }
-.header span { color:#999; font-size:13px; }
-.search-bar { margin-bottom:12px; }
-.search-bar input { width:100%; padding:12px 16px; font-size:15px; border:1px solid #ddd; border-radius:8px; }
-.paciente { background:white; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,.06); padding:14px 16px; margin-bottom:8px; cursor:pointer; transition:.2s; }
-.paciente:active { background:#ebf5fb; }
-.paciente .nombre { font-size:16px; font-weight:bold; color:#2c3e50; }
-.paciente .detalle { font-size:13px; color:#7f8c8d; margin-top:4px; }
-.paciente .dueno { font-size:12px; color:#999; margin-top:2px; }
-.btn-salir { background:#c0392b; color:white; border:none; padding:8px 14px; border-radius:6px; font-size:13px; cursor:pointer; text-decoration:none; }
+.paciente{background:white;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:.2s;text-decoration:none;display:block;color:inherit}
+.paciente:hover{background:#ebf5fb;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.paciente .nombre{font-size:16px;font-weight:700;color:#2c3e50}
+.paciente .detalle{font-size:13px;color:#7f8c8d;margin-top:4px}
+.paciente .dueno{font-size:12px;color:#999;margin-top:2px}
 </style>
 </head>
 <body>
-<div class="header">
-<div><h1>👤 {{ doctor }}</h1><span>{{ pacientes|length }} paciente(s)</span></div>
-<div style="display:flex;gap:6px;align-items:center;">
-<a href="/cobros" style="background:#e74c3c;color:white;padding:8px 12px;border-radius:6px;font-size:13px;text-decoration:none;font-weight:bold;">💰 {{ pendientes }}</a>
-<a href="/mis_consultas" style="background:#3498db;color:white;padding:8px 12px;border-radius:6px;font-size:13px;text-decoration:none;font-weight:bold;">📋</a>
-<a href="/pendientes_insumos" style="background:#e67e22;color:white;padding:8px 12px;border-radius:6px;font-size:13px;text-decoration:none;font-weight:bold;">📦</a>
-<a href="/logout" class="btn-salir">Salir</a>
-</div>
-</div>
-<div class="search-bar"><input type="text" id="search" placeholder="Buscar paciente..." oninput="filtrar()"></div>
-<div id="lista">
-{% for p in pacientes %}
-<a href="/consulta/{{ p.id }}" style="text-decoration:none;">
-<div class="paciente">
-<div class="nombre">{{ p.nombre }}</div>
-<div class="detalle">{{ p.especie }}{% if p.raza %} - {{ p.raza }}{% endif %}{% if p.edad %} | {{ p.edad }} año(s){% endif %}</div>
-<div class="dueno">Dueño: {{ p.dueno_nombre }}</div>
-</div>
-</a>
-{% endfor %}
+<div class="container-fluid p-3 p-md-4" style="background:#f0f4f8;min-height:100vh">
+  <div class="d-flex justify-content-between align-items-center bg-white rounded-3 shadow-sm p-3 mb-3 flex-wrap gap-2">
+    <div>
+      <h5 class="mb-0 fw-bold">&#128100; {{ doctor }}</h5>
+      <small class="text-muted">{{ pacientes|length }} paciente(s)</small>
+    </div>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+      <a href="/cobros" class="btn btn-sm text-white fw-bold" style="background:#e74c3c">&#128176; {{ pendientes }}</a>
+      <a href="/mis_consultas" class="btn btn-sm text-white fw-bold" style="background:#3498db">&#128203;</a>
+      <a href="/pendientes_insumos" class="btn btn-sm text-white fw-bold" style="background:#e67e22">&#128230;</a>
+      <a href="/logout" class="btn btn-sm text-white" style="background:#c0392b">Salir</a>
+    </div>
+  </div>
+  <div class="mb-3">
+    <input type="text" class="form-control" id="search" placeholder="Buscar paciente..." oninput="filtrar()">
+  </div>
+  <div id="lista">
+  {% for p in pacientes %}
+  <a href="/consulta/{{ p.id }}" class="paciente">
+    <div class="nombre">{{ p.nombre }}</div>
+    <div class="detalle">{{ p.especie }}{% if p.raza %} - {{ p.raza }}{% endif %}{% if p.edad %} | {{ p.edad }} a&ntilde;o(s){% endif %}</div>
+    <div class="dueno">Due&ntilde;o: {{ p.dueno_nombre }}</div>
+  </a>
+  {% endfor %}
+  </div>
 </div>
 <script>
 function filtrar(){
