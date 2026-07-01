@@ -6,24 +6,25 @@
 <title>SCRIPTYFY - Acceso</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
-body{background:#1a1a2e;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
-.card-login{background:rgba(255,255,255,.95);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.4);padding:28px 24px;width:100%;max-width:400px;backdrop-filter:blur(4px)}
-.logo{font-size:40px;text-align:center;margin-bottom:8px}
-.card-login h1{font-size:22px;color:#2c3e50;text-align:center;margin-bottom:2px}
-.card-login .sub{color:#7f8c8d;font-size:13px;text-align:center;margin-bottom:16px}
+body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;background:url('/photos/bg_login.jpg') center/cover no-repeat fixed}
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);z-index:0}
+.card-login{background:rgba(255,255,255,.95);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.4);padding:28px 24px;width:100%;max-width:400px;position:relative;z-index:1;backdrop-filter:blur(4px)}
+.logo{text-align:center;margin-bottom:12px}
+.logo img{max-width:160px;height:auto}
+.nav-pills .nav-link.active{background:#1abc9c!important;color:#fff!important}
+.btn-custom{background:#1abc9c;color:white}
+.btn-custom:hover{background:#16a085;color:white}
 </style>
 </head>
 <body>
 <div class="card-login">
-  <div class="logo">&#128054;</div>
-  <h1>SCRIPTYFY</h1>
-  <div class="sub">Sistema de Gesti&oacute;n Veterinaria</div>
+  <div class="logo"><img src="/photos/logo.png" alt="SCRIPTYFY"></div>
   <ul class="nav nav-pills nav-fill mb-3 border rounded overflow-hidden" role="tablist">
     <li class="nav-item" role="presentation">
-      <button class="nav-link active rounded-0 fw-semibold" style="color:#1abc9c" id="tab-doctor-btn" data-bs-toggle="pill" data-bs-target="#tab-doctor" type="button" role="tab">Doctor</button>
+      <button class="nav-link active rounded-0 fw-semibold text-secondary" id="tab-doctor-btn" data-bs-toggle="pill" data-bs-target="#tab-doctor" type="button" role="tab">Doctor</button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link rounded-0 fw-semibold" style="color:#1abc9c" id="tab-admin-btn" data-bs-toggle="pill" data-bs-target="#tab-admin" type="button" role="tab">Admin</button>
+      <button class="nav-link rounded-0 fw-semibold text-secondary" id="tab-admin-btn" data-bs-toggle="pill" data-bs-target="#tab-admin" type="button" role="tab">Admin</button>
     </li>
   </ul>
   {% if error %}<div class="alert alert-danger py-2 small text-center mb-3">{{ error }}</div>{% endif %}
@@ -36,7 +37,7 @@ body{background:#1a1a2e;min-height:100vh;display:flex;align-items:center;justify
           <option value="{{ d }}">{{ d }}</option>
           {% endfor %}
         </select>
-        <button class="btn w-100 py-2 fw-bold text-white border-0" style="background:#1abc9c" type="submit">Ingresar como Doctor</button>
+        <button class="btn btn-custom w-100 py-2 fw-bold" type="submit">Ingresar como Doctor</button>
       </form>
     </div>
     <div class="tab-pane fade" id="tab-admin" role="tabpanel">
@@ -47,15 +48,11 @@ body{background:#1a1a2e;min-height:100vh;display:flex;align-items:center;justify
         <div class="mb-3">
           <input name="password" type="password" placeholder="Contrase&ntilde;a" required class="form-control">
         </div>
-        <button class="btn w-100 py-2 fw-bold text-white border-0" style="background:#1abc9c" type="submit">Ingresar como Admin</button>
+        <button class="btn btn-custom w-100 py-2 fw-bold" type="submit">Ingresar como Admin</button>
       </form>
     </div>
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-document.getElementById('tab-doctor-btn').addEventListener('click',function(){this.style.color='#fff';document.getElementById('tab-admin-btn').style.color='#1abc9c'});
-document.getElementById('tab-admin-btn').addEventListener('click',function(){this.style.color='#fff';document.getElementById('tab-doctor-btn').style.color='#1abc9c'});
-</script>
 </body>
 </html>
