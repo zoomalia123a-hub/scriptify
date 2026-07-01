@@ -31,9 +31,19 @@
         <li class="nav-item"><a class="nav-link" href="/duenos">Due&ntilde;os</a></li>
         <li class="nav-item"><a class="nav-link" href="/animales">Pacientes</a></li>
         <li class="nav-item"><a class="nav-link" href="/citas">Citas</a></li>
+        {% if rol == 'admin' %}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Admin</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="/reportes">Reportes</a></li>
+            <li><a class="dropdown-item" href="/productos">Productos</a></li>
+            <li><a class="dropdown-item" href="/ventas">Ventas</a></li>
+          </ul>
+        </li>
+        {% endif %}
       </ul>
-      <div class="d-flex align-items-center gap-2 mt-2 mt-lg-0">
-        <span class="text-white" style="font-size:13px;opacity:.9">{{ doctor }}</span>
+      <div class="d-flex align-items-center gap-2 mt-2 mt-lg-0 flex-wrap">
+        <span class="text-white" style="font-size:13px;opacity:.9">{{ doctor }}{% if rol == 'admin' %} (Admin){% endif %}</span>
         <a href="/logout" class="btn btn-sm text-white px-3" style="background:rgba(255,255,255,.15)">Salir</a>
       </div>
     </div>

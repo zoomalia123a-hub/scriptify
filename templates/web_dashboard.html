@@ -31,17 +31,28 @@
   </div>
 </div>
 <div class="row g-3">
-  <div class="col-md-6 col-12">
-    <a href="/pacientes" class="btn btn-primary w-100 py-3 fs-5 fw-bold border-0" style="background:#1abc9c">&#128104;&#8205;&#127973; Atenci&oacute;n M&eacute;dica</a>
+  <div class="col-md-6 col-lg-3">
+    <a href="/pacientes" class="btn w-100 py-3 fs-5 fw-bold border-0 text-white" style="background:#1abc9c">&#128104;&#8205;&#127973; Atenci&oacute;n M&eacute;dica</a>
   </div>
-  <div class="col-md-6 col-12">
+  <div class="col-md-6 col-lg-3">
     <a href="/cobros" class="btn w-100 py-3 fs-5 fw-bold border-0 text-white" style="background:#f39c12">&#128176; Cobros Pendientes</a>
   </div>
-  <div class="col-md-6 col-12">
+  <div class="col-md-6 col-lg-3">
     <a href="/mis_consultas" class="btn w-100 py-3 fs-5 fw-bold border-0 text-white" style="background:#3498db">&#128203; Mis Consultas</a>
   </div>
-  <div class="col-md-6 col-12">
-    <a href="/duenos" class="btn w-100 py-3 fs-5 fw-bold border-0 text-white" style="background:#95a5a6">&#128101; Registrar Due&ntilde;o</a>
+  <div class="col-md-6 col-lg-3">
+    <a href="/duenos" class="btn w-100 py-3 fs-5 fw-bold border-0 text-white" style="background:#95a5a6">&#128101; Due&ntilde;os</a>
   </div>
+  {% if rol == 'admin' %}
+  <div class="col-md-6 col-lg-3">
+    <a href="/animales" class="btn w-100 py-3 fs-5 fw-bold border-0 text-white" style="background:#9b59b6">&#128054; Todos los Pacientes</a>
+  </div>
+  <div class="col-md-6 col-lg-3">
+    <a href="/citas" class="btn w-100 py-3 fs-5 fw-bold border-0 text-white" style="background:#2c3e50">&#128197; Gesti&oacute;n de Citas</a>
+  </div>
+  <div class="col-12 mt-2">
+    <a href="/deploy" class="btn w-100 py-2 fw-bold border-0 text-white" style="background:#e74c3c" onclick="return confirm('Actualizar desde GitHub? El servidor se reiniciara.')">&#128260; Actualizar desde GitHub</a>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

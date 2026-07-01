@@ -15,6 +15,10 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', os.urandom(32).hex())
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
+@app.context_processor
+def inject_globals():
+    return dict(rol=session.get("rol", ""))
+
 @app.after_request
 def add_headers(resp):
     resp.headers['X-Content-Type-Options'] = 'nosniff'
@@ -570,6 +574,54 @@ def web_mis_consultas():
     """, (doctorname,))
     conn.close()
     return render_template("web_mis_consultas.html", consultas=rows, doctor=doctorname)
+
+@app.route("/deploy", methods=["GET", "POST"])
+def web_deploy():
+    import subprocess
+    if request.method == "POST":
+        token = request.headers.get("X-Deploy-Token", "")
+        expected = os.environ.get("DEPLOY_TOKEN", "scriptyfy2026")
+        if token != expected:
+            return "Unauthorized", 401
+    elif session.get("rol") != "admin":
+        return redirect(url_for("dashboard"))
+    base = os.path.dirname(os.path.abspath(__file__))
+    try:
+        r = subprocess.run(["git", "-C", base, "pull", "origin", "main"], capture_output=True, timeout=60, text=True)
+        out = r.stdout + r.stderr
+        subprocess.Popen(["pkill", "gunicorn"], start_new_session=True)
+        subprocess.Popen(
+            ["nohup", "gunicorn", "servidor_web:app", "--bind", "0.0.0.0:5000",
+             "--workers", "2", "--timeout", "120"],
+            cwd=base, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            start_new_session=True)
+        return f"OK: {out[:500]}", 200
+    except Exception as e:
+        return f"Error: {e}", 500
+
+@app.route("/reportes")
+@login_required
+def reportes():
+    if session.get("rol") != "admin":
+        return redirect(url_for("dashboard"))
+    return render_template("web_reportes.html", doctor=session["doctor"])
+
+@app.route("/productos")
+@login_required
+def web_productos():
+    if session.get("rol") != "admin":
+        return redirect(url_for("dashboard"))
+    conn = database.get_db()
+    productos = database.fetchall(conn, "SELECT * FROM productos ORDER BY nombre")
+    conn.close()
+    return render_template("web_productos.html", productos=productos, doctor=session["doctor"])
+
+@app.route("/ventas")
+@login_required
+def web_ventas():
+    if session.get("rol") != "admin":
+        return redirect(url_for("dashboard"))
+    return render_template("web_ventas.html", doctor=session["doctor"])
 
 def start_server():
     database.init_db()
