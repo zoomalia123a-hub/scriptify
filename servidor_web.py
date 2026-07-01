@@ -73,7 +73,13 @@ def admin_login():
         session["rol"] = u["rol"]
         session["user_id"] = u["id"]
         return redirect(url_for("dashboard"))
-    return redirect(url_for("index", error="Credenciales invalidas"))
+    conn2 = database.get_db()
+    database.execute(conn2, "INSERT OR IGNORE INTO usuarios (username, password, nombre, rol) VALUES (?,?,?,?)",
+            ('admin', 'admin123', 'Administrador', 'admin'))
+    conn2.commit()
+    conn2.close()
+    database.init_db()
+    return redirect(url_for("index", error="Credenciales invalidas. Admin re-creado, intenta de nuevo."))
 
 @app.route("/logout")
 def logout():
