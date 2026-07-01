@@ -1,1 +1,0 @@
-cd /opt/scriptyfy && git add -A && git commit -m "Fix SUNAT factura IGV: use '10'/Gravado/IGV with correct base calculation" && git push origin main
