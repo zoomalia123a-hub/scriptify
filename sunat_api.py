@@ -59,52 +59,84 @@ def consultar_estado(ticket):
         return {"success": False, "message": str(e)}
 
 def armar_comprobante(venta, items):
+    from datetime import datetime
     tipo_doc = "factura" if venta.get("tipo_comprobante") == "Factura" else "boleta"
     tiene_dni_valido = bool(venta.get("cliente_dni")) and len(venta.get("cliente_dni", "")) == 11
-    cliente_tipo = "6" if tiene_dni_valido else "1"
-    cliente_num = venta.get("cliente_dni") or "00000000"
-    cliente_nombre = venta.get("cliente_nombre") or "Cliente Variado"
+    es_factura = tipo_doc == "factura"
+    if es_factura:
+        cliente_tipo = "6"
+        cliente_num = venta.get("cliente_dni") or "00000000"
+    else:
+        cliente_tipo = "1"
+        cliente_num = venta.get("cliente_dni") or "00000000"
+    cliente_nombre = venta.get("cliente_nombre") or ("Cliente Variado" if not es_factura else "CLIENTE VARIOS")
     if not cliente_nombre.strip():
-        cliente_nombre = "Cliente Variado"
+        cliente_nombre = "Cliente Variado" if not es_factura else "CLIENTE VARIOS"
     cliente_dir = venta.get("cliente_direccion") or ""
     tiene_igv = float(venta.get("igv", 0)) > 0
     sunat_items = []
+    total_gravada = 0.0
+    total_exonerada = 0.0
+    total_igv = 0.0
+    total_item_sum = 0.0
     for it in items:
         cantidad = float(it.get("cantidad") or it.get("cant", 1))
         precio_unitario = float(it.get("precio_unitario") or it.get("precio", 0))
         subtotal_item = float(it.get("subtotal", 0))
         if tiene_igv and tipo_doc == "factura":
-            valor_unitario = round(precio_unitario / 1.18, 4)
-            igv_item = round(subtotal_item - (subtotal_item / 1.18), 2)
-            total_item = subtotal_item
+            valor_unitario = round(precio_unitario / 1.18, 6)
+            base_item = round(valor_unitario * cantidad, 2)
+            igv_item = round(base_item * 0.18, 2)
+            total_item = round(base_item + igv_item, 2)
+            total_gravada += base_item
+            total_igv += igv_item
+            pct_igv = "18"
+            cod_afectacion = "10"
+            tributo = "IGV"
         else:
-            valor_unitario = precio_unitario
+            valor_unitario = round(precio_unitario, 6)
             igv_item = 0
-            total_item = subtotal_item
+            base_item = round(valor_unitario * cantidad, 2)
+            total_item = base_item
+            total_exonerada += base_item
+            pct_igv = "0"
+            cod_afectacion = "21"
+            tributo = "GRA"
         codigo = str(it.get("referencia_id") or it.get("id", ""))
         sunat_items.append({
             "unidad_de_medida": "NIU",
-            "codigo": codigo or "",
+            "codigo_interno": codigo or "",
             "descripcion": it.get("nombre", "Producto"),
-            "cantidad": cantidad,
-            "valor_unitario": valor_unitario,
-            "precio_unitario": precio_unitario,
-            "subtotal": subtotal_item,
+            "cantidad": str(cantidad),
+            "valor_unitario": str(valor_unitario),
+            "precio_unitario": str(round(precio_unitario, 2)),
+            "subtotal": str(round(base_item, 2)),
+            "porcentaje_igv": pct_igv,
+            "codigo_tipo_afectacion_igv": cod_afectacion,
+            "nombre_tributo": tributo,
             "tipo_de_igv": "1" if tiene_igv else "2",
-            "igv": igv_item,
-            "total": total_item,
+            "igv": str(round(igv_item, 2)),
+            "total": str(round(total_item, 2)),
         })
+        total_item_sum += round(total_item, 2)
+    total_general = round(total_gravada + total_exonerada + total_igv, 2)
     data = {
         "documento": tipo_doc,
         "serie": venta.get("serie", "B001"),
         "numero": int(venta.get("numero", 0)),
         "fecha_de_emision": venta.get("fecha", ""),
         "fecha_de_vencimiento": venta.get("fecha", ""),
+        "hora_de_emision": venta.get("hora", datetime.now().strftime("%H:%M:%S")),
+        "tipo_operacion": "0101",
         "moneda": "PEN",
         "cliente_tipo_de_documento": cliente_tipo,
         "cliente_numero_de_documento": cliente_num,
         "cliente_denominacion": cliente_nombre,
-        "cliente_direccion": cliente_dir,
+        "cliente_direccion": cliente_dir or "AV SIN DIRECCION 123",
+        "total_gravada": str(round(total_gravada, 2)),
+        "total_exonerada": str(round(total_exonerada, 2)),
+        "total_igv": str(round(total_igv, 2)),
+        "total": str(round(total_general, 2)),
         "items": sunat_items,
     }
     return data

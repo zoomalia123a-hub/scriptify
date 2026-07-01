@@ -1,5 +1,4 @@
-import os
-import sunat_api, sys, json, uuid, logging, csv, io, urllib.parse, hashlib, time, math, re
+import os, sys, json, uuid, logging, csv, io, urllib.parse, hashlib, time, math, re
 from datetime import date, datetime, timedelta
 from functools import wraps
 import requests
@@ -12,6 +11,7 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import database
 import storage
+import sunat_api
 
 database.init_db()
 
@@ -172,6 +172,9 @@ def index():
         "SELECT DISTINCT nombre FROM doctores ORDER BY nombre")]
     conn.close()
     return render_template("web_login.html", doctores=doctores, error=request.args.get("error"))
+ except:
+ row[servicio_nombre] = \
+    return render_template("web_login.html", doctores=doctores, error=request.args.get("error"))
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -183,6 +186,16 @@ def login():
     conn = database.get_db()
     exists = database.fetchone(conn, "SELECT id FROM doctores WHERE nombre=?", (doctor,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     if exists:
         session.permanent = True
         session["doctor"] = doctor
@@ -200,6 +213,16 @@ def admin_login():
     u = database.fetchone(conn,
         "SELECT * FROM usuarios WHERE username=? AND activo=1", (user,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     if u and verify_pwd(u["password"], pwd):
         session.permanent = True
         session["doctor"] = u["nombre"]
@@ -276,6 +299,16 @@ def dashboard():
         "FROM animales GROUP BY especie ORDER BY cnt DESC")]
 
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_dashboard.html", td=td, ta=ta, ch=ch,
                            co_hoy=co_hoy, co_ayer=co_ayer,
                            ventas_hoy=ventas_hoy, prod_bajos=prod_bajos,
@@ -356,6 +389,16 @@ def web_nuevo_paciente_consulta():
         conn.close()
         return redirect(url_for("consulta", animal_id=nuevo_id))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("web_nuevo_paciente_consulta.html", doctor=session["doctor"])
 
 @app.route("/editar_paciente/<int:animal_id>", methods=["GET","POST"])
@@ -386,6 +429,16 @@ def web_editar_paciente(animal_id):
         conn.close()
         return redirect(url_for("consulta", animal_id=animal_id))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("web_editar_paciente.html", p=p, doctor=session["doctor"], dueno=p)
 
 @app.route("/pacientes")
@@ -400,6 +453,16 @@ def pacientes():
         "SELECT COUNT(*) as cnt FROM cobros_pendientes cp "
         "JOIN registros_medicos r ON cp.id_registro = r.id WHERE cp.cobrado=0 AND r.doctor=?", (doctorname,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("web_pacientes.html", pacientes=rows, doctor=doctorname,
                            pendientes=pendientes["cnt"] if pendientes else 0)
 
@@ -450,6 +513,16 @@ def listar_duenos():
         dd["deuda"] = row["deuda"] if row else 0
         duenos.append(dd)
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_duenos.html", duenos=duenos, q=q, page=page, total_pages=total_pages, total=cnt,
         filtro=filtro, filtro_param=filtro_param, filtro_val=filtro_val,
         title="Due\u00f1os", active="duenos", **_ctx())
@@ -466,6 +539,16 @@ def exportar_duenos():
         params.extend([f"%{q}%", f"%{q}%", f"%{q}%", f"%{q}%"])
     rows = database.fetchall(conn, "SELECT * FROM duenos d"+where+" ORDER BY nombre", params)
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     title = "Due\u00f1os" + (f" - Busqueda: {q}" if q else "")
     cols = ["ID","Nombre","DNI/RUC","Tel\u00e9fono","Email","Direcci\u00f3n"]
     keys = ["id","nombre","dni","telefono","email","direccion"]
@@ -486,6 +569,16 @@ def crear_dueno():
         conn.commit(); conn.close()
         return redirect(url_for("listar_duenos"))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return redirect(url_for("listar_duenos"))
 
 @app.route("/duenos/<int:id>")
@@ -510,6 +603,16 @@ def ver_dueno(id):
     if ultimo_registro and ultimo_registro["fecha"]: fechas.append(ultimo_registro["fecha"])
     if fechas: ultima_visita = max(fechas)
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_dueno_detail.html", d=d, animales=animales, ventas=ventas, total_ventas=total_ventas,
         deuda=deuda, total_gastado=total_gastado, ultima_visita=ultima_visita,
         title=d["nombre"], active="duenos", **_ctx())
@@ -527,6 +630,16 @@ def editar_dueno(id):
         return redirect(url_for("listar_duenos", edited=id))
     item = database.fetchone(conn, "SELECT * FROM duenos WHERE id=?", (id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     if not item:
         return redirect(url_for("listar_duenos"))
     return render_template("admin_dueno_form.html", item=item, title="Editar Due\u00f1o", active="duenos", **_ctx())
@@ -550,6 +663,16 @@ def api_duenos_relaciones(id):
     ventas = database.fetchone(conn, "SELECT COUNT(*) as c FROM ventas WHERE id_cliente=?", (id,))["c"]
     creditos = database.fetchone(conn, "SELECT COUNT(*) as c FROM creditos WHERE id_cliente=?", (id,))["c"]
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return {"animales": animales, "citas": citas, "ventas": ventas, "creditos": creditos}
 
 # ===== ANIMALES =====
@@ -561,6 +684,16 @@ def listar_animales():
         "SELECT a.*, d.nombre as dueno_nombre FROM animales a "
         "JOIN duenos d ON a.id_dueno = d.id ORDER BY a.id DESC")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_list.html", items=animales,
         cols=["id","nombre","especie","raza","edad","dueno_nombre"],
         labels=["ID","Nombre","Especie","Raza","Edad","Due\u00f1o"],
@@ -581,6 +714,16 @@ def crear_animal():
         conn.commit(); conn.close()
         return redirect(url_for("listar_animales"))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_animal_form.html", duenos=duenos, item=None, title="Nuevo Paciente", active="animales", **_ctx())
 
 @app.route("/animales/<int:id>/editar", methods=["GET", "POST"])
@@ -598,6 +741,16 @@ def editar_animal(id):
         return redirect(url_for("historial_global", edited_animal=id))
     item = database.fetchone(conn, "SELECT * FROM animales WHERE id=?", (id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_animal_form.html", duenos=duenos, item=item, title="Editar Paciente", active="animales", **_ctx())
 
 @app.route("/animales/<int:id>/eliminar")
@@ -623,6 +776,16 @@ def ver_animal(id):
     ultimo_peso = database.fetchone(conn,
         "SELECT fecha, peso FROM registros_medicos WHERE id_animal=? AND peso IS NOT NULL ORDER BY fecha DESC LIMIT 1", (id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_animal_detail.html", a=item, historial=historial, hermanos=hermanos, duenos=duenos, ultimo_peso=ultimo_peso, title="Paciente: "+item["nombre"], active="animales", **_ctx())
 
 # ===== CITAS =====
@@ -673,6 +836,16 @@ def listar_citas():
     servicios_grooming = database.fetchall(conn,
         "SELECT id, nombre, precio FROM servicios_grooming ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     precios_cita = {}
     for s in servicios:
         precios_cita[s["nombre"].lower()] = s["precio"]
@@ -697,6 +870,16 @@ def crear_cita():
         return redirect(url_for("listar_citas"))
     animales = database.fetchall(conn,"SELECT a.*,d.nombre as dueno_nombre FROM animales a JOIN duenos d ON a.id_dueno=d.id")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return redirect(url_for("listar_citas"))
 
 @app.route("/citas/<int:id>/completar")
@@ -773,6 +956,16 @@ def listar_productos():
     grooming_servicios = database.fetchall(conn, "SELECT * FROM servicios_grooming ORDER BY nombre")
     servicios_medicos = database.fetchall(conn, "SELECT * FROM servicios_medicos ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_productos.html", items=items, q=q, cat_f=cat_f, stock_bajo=stock_bajo,
         page=page, total_pages=total_pages, total=total, categorias=categorias, stock_critico=stock_critico,
         tab=tab, grooming_servicios=grooming_servicios, servicios_medicos=servicios_medicos,
@@ -814,6 +1007,16 @@ def crear_producto():
         conn.commit(); conn.close()
         return redirect(url_for("ver_producto", id=pid))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     categorias = database.get_categorias() + ["+ Nueva Categor\u00eda"]
     return render_template("admin_form.html", fields=[
         ("nombre","Nombre",True),("descripcion","Descripci\u00f3n","textarea"),
@@ -864,6 +1067,16 @@ def editar_producto(id):
         return redirect(url_for("ver_producto", id=id))
     item = database.fetchone(conn,"SELECT * FROM productos WHERE id=?",(id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     categorias = database.get_categorias() + ["+ Nueva Categor\u00eda"]
     if item and item["categoria"] and item["categoria"] not in categorias:
         categorias.insert(-1, item["categoria"])
@@ -891,6 +1104,16 @@ def catalogo(tipo):
     items = database.fetchall(conn,
         "SELECT * FROM productos WHERE activo=1 AND stock>0 AND en_catalogo=1 ORDER BY categoria, nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     by_cat = {}
     for it in items:
         cat = it["categoria"] or "General"
@@ -907,6 +1130,16 @@ def catalogo_pdf(tipo):
     items = database.fetchall(conn,
         "SELECT * FROM productos WHERE activo=1 AND stock>0 AND en_catalogo=1 ORDER BY categoria, nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     by_cat = {}
     for it in items:
         cat = it["categoria"] or "General"
@@ -969,6 +1202,16 @@ def ver_producto(id):
     movimientos = database.fetchall(conn,
         "SELECT * FROM stock_movimientos WHERE id_producto=? ORDER BY fecha DESC LIMIT 50", (id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_producto_detail.html", item=item, ventas=ventas,
         total_vendido=total_vendido, total_ingresos=total_ingresos, movimientos=movimientos,
         title=item["nombre"], active="productos", **_ctx())
@@ -985,6 +1228,16 @@ def api_productos_crear():
     conn.commit()
     nuevo_id = database.fetchone(conn, "SELECT MAX(id) as id FROM productos")["id"]
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return Response(json.dumps({"id":nuevo_id,"nombre":nombre,"precio_venta":float(precio)}), mimetype="application/json")
 
 # ===== VENTAS =====
@@ -1040,6 +1293,16 @@ def listar_ventas():
     ventas = database.fetchall(conn, sql, params)
     total_pages = max(1, (total + per_page - 1) // per_page)
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_ventas.html", ventas=ventas, title="Ventas", active="ventas",
         q=q, desde=desde, hasta=hasta, page=page, total_pages=total_pages,
         ok=ok, error=error, **_ctx())
@@ -1071,6 +1334,16 @@ def exportar_ventas():
         where += " AND fecha <= ?"; params.append(hasta)
     rows = database.fetchall(conn, "SELECT * FROM ventas "+where+" ORDER BY fecha DESC, id DESC", params)
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     data = []
     for r in rows:
         rd = dict(r)
@@ -1097,6 +1370,16 @@ def nueva_venta():
     clientes = database.fetchall(conn,"SELECT id,nombre FROM duenos ORDER BY nombre")
     por_mayor_count = database.fetchone(conn, "SELECT COUNT(*) as c FROM productos WHERE activo=1 AND por_mayor=1", [])["c"]
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_venta_form.html", productos=productos, servicios_med=servicios_med,
         servicios_groom=servicios_groom, combos=combos, clientes=clientes, title="Nueva Venta", active="ventas", por_mayor_count=por_mayor_count, **_ctx())
 
@@ -1143,7 +1426,7 @@ def guardar_venta():
         if dni_cliente and nombre_cliente:
             exist = database.fetchone(conn, "SELECT id FROM duenos WHERE dni=? AND dni!=''", (dni_cliente,))
             if not exist:
-                database.execute(conn,"INSERT INTO duenos (nombre,dni,telefono) VALUES (?,?,?)", (nombre_cliente, dni_cliente, ""))
+                database.execute(conn,"INSERT INTO duenos (nombre,dni) VALUES (?,?)", (nombre_cliente, dni_cliente))
         # Descuento + IGV
         subtotal_sin_desc = total
         descuento_global = float(request.form.get("descuento_global","0"))
@@ -1209,28 +1492,42 @@ def guardar_venta():
             for p in pagos:
                 database.execute(conn, "INSERT INTO pagos (id_venta,monto,metodo,fecha) VALUES (?,?,?,?)", (venta_id, float(p.get("monto",0)), p.get("metodo","efectivo"), str(date.today())))
         conn.commit()
-        # SUNAT emit
+        # Emitir comprobante electronico SUNAT
         try:
-            cfg = sunat_api._config()
-            if cfg.get("enabled") and tipo_comp in ("Boleta", "Factura"):
-                venta_dict = {
-                    "tipo_comprobante": tipo_comp, "serie": serie, "numero": numero,
-                    "fecha": str(date.today()), "cliente_dni": dni_cliente or "",
-                    "cliente_nombre": nombre_cliente or "", "cliente_direccion": "",
-                    "subtotal": subtotal_con_desc, "igv": igv, "total": total_final,
-                }
-                sunat_data = sunat_api.armar_comprobante(venta_dict, items)
-                res = sunat_api.emitir_comprobante(sunat_data)
-                if res:
-                    payload = res.get("payload") or {}
-                    db_estado = res.get("sunat_estado") or res.get("estado") or payload.get("estado","").lower() or ("aceptado" if res.get("success") else "error")
-                    db_ticket = res.get("sunat_ticket") or res.get("ticket") or payload.get("ticket") or ""
-                    database.execute(conn, "UPDATE ventas SET sunat_estado=?, sunat_ticket=?, sunat_fecha_envio=datetime('now','localtime') WHERE id=?", (db_estado, db_ticket, venta_id))
-                    conn.commit()
+            venta_data = {
+                "tipo_comprobante": tipo_comp,
+                "cliente_dni": dni_cliente,
+                "cliente_nombre": nombre_cliente,
+                "cliente_direccion": request.form.get("cliente_direccion", ""),
+                "igv": igv,
+                "serie": serie,
+                "numero": numero,
+                "fecha": str(date.today()),
+            }
+            sunat_items = []
+            for it in items:
+                sunat_items.append({
+                    "cantidad": float(it.get("cant", 1)),
+                    "precio_unitario": float(it.get("precio", 0)),
+                    "subtotal": float(it.get("subtotal", 0)),
+                    "referencia_id": str(it.get("id", "")),
+                    "nombre": it.get("nombre", "Producto"),
+                })
+            payload = sunat_api.armar_comprobante(venta_data, sunat_items)
+            resp = sunat_api.emitir_comprobante(payload)
+            if resp and resp.get("success"):
+                database.execute(conn,
+                    "UPDATE ventas SET sunat_estado=?, sunat_ticket=?, sunat_fecha_envio=? WHERE id=?",
+                    (resp.get("estado", "enviado"), resp.get("ticket", ""), str(date.today()), venta_id))
+            else:
+                database.execute(conn,
+                    "UPDATE ventas SET sunat_estado=? WHERE id=?",
+                    ("error: " + (resp.get("message","") if resp else "sin respuesta"), venta_id))
+            conn.commit()
         except Exception as e:
-            print(f"SUNAT error: {e}")
-            try: database.execute(conn, "UPDATE ventas SET sunat_estado=? WHERE id=?", ("error", venta_id)); conn.commit()
-            except: pass
+            logger.error("Error SUNAT en venta #%s: %s", venta_id, e)
+            database.execute(conn, "UPDATE ventas SET sunat_estado=? WHERE id=?", ("error: " + str(e), venta_id))
+            conn.commit()
         conn.close()
         return redirect(url_for("ticket", venta_id=venta_id))
     except Exception as e:
@@ -1251,6 +1548,16 @@ def ver_venta(id):
     if v["estado"] == "anulada":
         nc = database.fetchone(conn, "SELECT id FROM notas_credito WHERE id_venta=?", (id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_venta_detail.html", v=v, items=items, pagos=pagos, nc=nc, title="Venta #"+str(id), active="ventas", **_ctx())
 
 @app.route("/ventas/<int:id>/anular", methods=["POST"])
@@ -1281,29 +1588,37 @@ def anular_venta(id):
         nc_id = database.fetchone(conn, "SELECT MAX(id) as id FROM notas_credito")["id"]
         database.execute(conn,"UPDATE ventas SET estado='anulada' WHERE id=?",(id,))
         conn.commit()
-        # SUNAT NC emit
+        # Emitir nota de credito electronica SUNAT
         try:
-            cfg = sunat_api._config()
-            if cfg.get("enabled") and v:
-                original = database.fetchone(conn, "SELECT serie, numero, sunat_estado FROM ventas WHERE id=?", (id,))
-                if original and original.get("sunat_estado") in ("aceptado", "pendiente"):
-                    nc_items = database.fetchall(conn, "SELECT * FROM venta_items WHERE id_venta=?", (id,))
-                    nc_venta_dict = {
-                        "tipo_comprobante": "Nota Credito", "serie": original["serie"], "numero": original["numero"],
-                        "fecha": str(date.today()), "cliente_dni": v.get("cliente_dni","") or "",
-                        "cliente_nombre": v.get("cliente_nombre","") or "", "cliente_direccion": "",
-                        "subtotal": nc_subtotal, "igv": nc_igv, "total": nc_total,
-                    }
-                    sunat_data = sunat_api.armar_comprobante(nc_venta_dict, nc_items)
-                    res = sunat_api.emitir_comprobante(sunat_data)
-                    if res:
-                        payload = res.get("payload") or {}
-                        db_estado = res.get("sunat_estado") or res.get("estado") or payload.get("estado","").lower() or ("aceptado" if res.get("success") else "error")
-                        db_ticket = res.get("sunat_ticket") or res.get("ticket") or payload.get("ticket") or ""
-                        database.execute(conn, "UPDATE notas_credito SET sunat_estado=?, sunat_ticket=?, sunat_fecha_envio=datetime('now','localtime') WHERE id=?", (db_estado, db_ticket, nc_id))
-                        conn.commit()
+            v = database.fetchone(conn, "SELECT * FROM ventas WHERE id=?", (id,))
+            if v and v.get("sunat_estado") and v["sunat_estado"] not in ("error", None, ""):
+                nc_data = {
+                    "tipo_comprobante": "Nota Credito",
+                    "cliente_dni": v.get("cliente_dni", ""),
+                    "cliente_nombre": v.get("cliente_nombre", "Cliente Variado"),
+                    "cliente_direccion": v.get("cliente_direccion", ""),
+                    "igv": v.get("igv", 0),
+                    "serie": serie,
+                    "numero": numero,
+                    "fecha": str(date.today()),
+                }
+                nc_items = []
+                for it in items:
+                    nc_items.append({
+                        "cantidad": float(it["cantidad"]),
+                        "precio_unitario": float(it["precio_unitario"]),
+                        "subtotal": float(it["subtotal"]),
+                        "referencia_id": str(it.get("referencia_id", "")),
+                        "nombre": it.get("nombre", "Producto"),
+                    })
+                payload = sunat_api.armar_comprobante(nc_data, nc_items)
+                # Add motivo for nota de credito
+                payload["motivo"] = motivo
+                resp = sunat_api.emitir_comprobante(payload)
+                if resp and resp.get("success"):
+                    logger.info("Nota credito SUNAT emitida para venta #%s, nc_id=%s", id, nc_id)
         except Exception as e:
-            print(f"SUNAT NC error: {e}")
+            logger.error("Error SUNAT nota credito para venta #%s: %s", id, e)
         conn.close()
         return redirect(url_for("ver_nota_credito", id=nc_id))
     except Exception as e:
@@ -1322,6 +1637,16 @@ def ver_nota_credito(id):
         return redirect(url_for("listar_ventas"))
     items = database.fetchall(conn, "SELECT * FROM venta_items WHERE id_venta=?", (nc["id_venta"],))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_nota_credito.html", nc=nc, items=items, title="Nota de Crédito", active="ventas", **_ctx())
 
 @app.route("/consulta/<int:animal_id>")
@@ -1355,6 +1680,16 @@ def consulta(animal_id):
     servicios_grooming = database.fetchall(conn,
         "SELECT id, nombre, precio FROM servicios_grooming ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     precios_cita = {}
     for s in servicios:
         precios_cita[s["nombre"].lower()] = s["precio"]
@@ -1391,6 +1726,16 @@ def web_historial_completo(animal_id):
         "SELECT * FROM registros_medicos WHERE id_animal=? ORDER BY fecha DESC, hora DESC",
         (animal_id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("web_historial_completo.html",
         paciente=p, dueno=p, registros=registros, doctor=session["doctor"])
 
@@ -1498,6 +1843,16 @@ def guardar_consulta(animal_id):
                  float(request.form.get("cita_precio",0))))
     conn.commit()
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     conn2 = database.get_db()
     p = database.fetchone(conn2, "SELECT nombre FROM animales WHERE id=?", (animal_id,))
     conn2.close()
@@ -1577,6 +1932,16 @@ def web_agregar_insumos(registro_id):
     productos = database.fetchall(conn,
         "SELECT id, nombre, stock, precio_venta FROM productos WHERE activo=1 ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     if not r:
         return "Registro no encontrado", 404
     return render_template("web_insumos.html", registro=r, productos=productos,
@@ -1632,6 +1997,16 @@ def web_pendientes_insumos():
         ORDER BY r.hora DESC
     """, (doctorname, hoy_str))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("web_pendientes_insumos.html",
                            registros=rows, doctor=doctorname, hoy=hoy_str)
 
@@ -1642,6 +2017,16 @@ def web_subir_foto(animal_id):
     conn = database.get_db()
     a = database.fetchone(conn, "SELECT id, nombre FROM animales WHERE id=?", (animal_id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     if not a:
         return "Animal no encontrado", 404
     error = None
@@ -1677,6 +2062,16 @@ def listar_grooming():
     animales = database.fetchall(conn, "SELECT a.*, d.nombre as dueno_nombre FROM animales a JOIN duenos d ON a.id_dueno=d.id ORDER BY a.nombre")
     servicios = database.fetchall(conn, "SELECT * FROM servicios_grooming ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_grooming.html", registros=registros, animales=animales,
                            servicios=servicios, title="Grooming", active="grooming", **_ctx())
 
@@ -1709,6 +2104,16 @@ def listar_servicios_grooming():
     conn = database.get_db()
     items = database.fetchall(conn, "SELECT * FROM servicios_grooming ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_servicios_grooming.html", items=items,
         title="Servicios de Grooming", active="servicios_grooming", **_ctx())
 
@@ -1750,6 +2155,16 @@ def exportar_servicios_grooming():
     conn = database.get_db()
     items = database.fetchall(conn, "SELECT * FROM servicios_grooming ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Border, Side
     wb = openpyxl.Workbook(); ws = wb.active; ws.title = "Grooming"
@@ -1798,6 +2213,16 @@ def listar_servicios():
         historial_map[s["id"]] = hist
     productos = database.fetchall(conn, "SELECT id,nombre,stock FROM productos WHERE activo=1 ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_servicios.html", servicios=servicios, insumos_map=insumos_map,
                            historial_map=historial_map, productos=productos,
                            title="Servicios", active="servicios", **_ctx())
@@ -1826,6 +2251,16 @@ def editar_servicio(id):
         return redirect(url_for("listar_servicios"))
     item = database.fetchone(conn, "SELECT * FROM servicios_medicos WHERE id=?", (id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_form.html", fields=[
         ("nombre","Nombre",True),("descripcion","Descripci\u00f3n","textarea"),
         ("precio","Precio","number"),("tipo","Tipo")
@@ -1863,6 +2298,16 @@ def servicio_insumos(id):
         "SELECT si.*, p.nombre as producto_nombre, p.stock FROM servicio_insumos si JOIN productos p ON si.id_producto=p.id WHERE si.id_servicio=? ORDER BY p.nombre", (id,))
     productos = database.fetchall(conn, "SELECT id,nombre,stock FROM productos WHERE activo=1 ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_servicio_insumos.html", servicio=servicio, insumos=insumos, productos=productos,
         title="Insumos: "+servicio["nombre"], active="servicios", **_ctx())
 
@@ -1953,6 +2398,16 @@ def listar_combos():
         item["combo_items"] = database.fetchall(conn, "SELECT * FROM combo_items WHERE id_combo=?", (c["id"],))
         combos.append(item)
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_combos.html", combos=combos, title="Combos/Paquetes", active="combos", **_ctx())
 
 @app.route("/combos/nuevo", methods=["GET", "POST"])
@@ -1983,6 +2438,16 @@ def crear_combo():
     servicios_med = database.fetchall(conn, "SELECT id,nombre,precio FROM servicios_medicos ORDER BY nombre")
     servicios_groom = database.fetchall(conn, "SELECT id,nombre,precio FROM servicios_grooming ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_combo_form.html", productos=productos, servicios_med=servicios_med,
         servicios_groom=servicios_groom, title="Nuevo Combo", active="combos", **_ctx())
 
@@ -2013,6 +2478,16 @@ def editar_combo(id):
     servicios_med = database.fetchall(conn, "SELECT id,nombre,precio FROM servicios_medicos ORDER BY nombre")
     servicios_groom = database.fetchall(conn, "SELECT id,nombre,precio FROM servicios_grooming ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_combo_form.html", item=c, productos=productos, servicios_med=servicios_med,
         servicios_groom=servicios_groom, title="Editar Combo", active="combos", **_ctx())
 
@@ -2027,6 +2502,16 @@ def exportar_combos():
         d = dict(c); d["combo_items"] = database.fetchall(conn, "SELECT * FROM combo_items WHERE id_combo=?", (c["id"],))
         combos.append(d)
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Border, Side
     wb = openpyxl.Workbook(); ws = wb.active; ws.title = "Combos"
@@ -2070,6 +2555,16 @@ def listar_proveedores():
         params.extend([f"%{q}%", f"%{q}%", f"%{q}%"])
     proveedores = database.fetchall(conn, "SELECT * FROM proveedores"+where+" ORDER BY nombre", params)
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_proveedores.html", proveedores=proveedores, q=q, title="Proveedores", active="proveedores", **_ctx())
 
 @app.route("/proveedores/nuevo", methods=["GET", "POST"])
@@ -2084,6 +2579,16 @@ def crear_proveedor():
         conn.commit(); conn.close()
         return redirect(url_for("listar_proveedores"))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return redirect(url_for("listar_proveedores"))
 
 @app.route("/proveedores/<int:id>/editar", methods=["GET", "POST"])
@@ -2098,6 +2603,16 @@ def editar_proveedor(id):
         conn.commit(); conn.close()
         return redirect(url_for("listar_proveedores"))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return redirect(url_for("listar_proveedores"))
 
 @app.route("/proveedores/<int:id>/eliminar")
@@ -2121,6 +2636,16 @@ def exportar_proveedores():
         params.extend([f"%{q}%", f"%{q}%", f"%{q}%"])
     proveedores = database.fetchall(conn, "SELECT * FROM proveedores"+where+" ORDER BY nombre", params) if params else database.fetchall(conn, "SELECT * FROM proveedores WHERE activo=1 ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Border, Side
     wb = openpyxl.Workbook(); ws = wb.active; ws.title = "Proveedores"
@@ -2159,6 +2684,16 @@ def listar_ordenes_compra():
         FROM ordenes_compra o JOIN proveedores p ON o.id_proveedor=p.id
     """+where+" ORDER BY o.fecha DESC LIMIT 100", params)
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_ordenes_compra.html", ordenes=ordenes, estado=estado, q=q,
         title="&Oacute;rdenes de Compra", active="ordenes_compra", **_ctx())
 
@@ -2181,6 +2716,16 @@ def exportar_ordenes_compra():
         FROM ordenes_compra o JOIN proveedores p ON o.id_proveedor=p.id
     """+where+" ORDER BY o.fecha DESC LIMIT 100", params)
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Border, Side
     wb = openpyxl.Workbook(); ws = wb.active; ws.title = "Órdenes Compra"
@@ -2223,6 +2768,16 @@ def crear_orden_compra():
     proveedores = database.fetchall(conn, "SELECT * FROM proveedores WHERE activo=1 ORDER BY nombre")
     productos = database.fetchall(conn, "SELECT id,nombre,precio_compra,precio_venta FROM productos WHERE activo=1 ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_orden_compra_form.html", proveedores=proveedores, productos=productos,
         title="Nueva Orden de Compra", active="ordenes_compra", **_ctx())
 
@@ -2241,6 +2796,16 @@ def ver_orden_compra(id):
         FROM orden_compra_items oi JOIN productos pr ON oi.id_producto=pr.id WHERE oi.id_orden=? ORDER BY pr.nombre
     """, (id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_orden_compra_detail.html", orden=orden, items=items,
         title="OC #"+str(orden["id"]), active="ordenes_compra", **_ctx())
 
@@ -2688,6 +3253,16 @@ def carga_rapida():
     categorias_list = database.fetchall(conn, "SELECT nombre FROM categorias ORDER BY nombre")
     categorias_list = [c["nombre"] for c in categorias_list]
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     # Limpiar temp files viejos (>1 hora)
     if os.path.isdir(_TEMP_DIR):
         ahora = time.time()
@@ -2935,6 +3510,16 @@ def api_venta_items(id):
     conn = database.get_db()
     items = database.fetchall(conn, "SELECT * FROM venta_items WHERE id_venta=?", (id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return Response(json.dumps([dict(r) for r in items]), mimetype="application/json")
 
 @app.route("/api/items/unificados")
@@ -2950,6 +3535,16 @@ def api_items_unificados():
     for s in database.fetchall(conn, "SELECT id,nombre,precio,'servicio_grooming' as tipo FROM servicios_grooming ORDER BY nombre"):
         items.append(dict(s))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return Response(json.dumps(items), mimetype="application/json")
 
 # ===== CREDITOS =====
@@ -2966,6 +3561,16 @@ def listar_creditos():
     """)
     total_pendiente = database.fetchone(conn, "SELECT COALESCE(SUM(saldo),0) as tot FROM creditos WHERE estado='pendiente'")["tot"]
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_creditos.html", creditos=creditos, total_pendiente=total_pendiente,
                            title="Cr\u00e9ditos", active="creditos", **_ctx())
 
@@ -3023,6 +3628,16 @@ def _query_reporte(desde, hasta, doctor=None):
         variacion = round(((total_ventas-ventas_anterior)/ventas_anterior*100) if ventas_anterior>0 else 0, 1)
     except: ventas_anterior=0; variacion=0
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return dict(titulo=f"Reporte {desde} a {hasta}", desde=desde, hasta=hasta,
         total_ventas=total_ventas, total_egresos=total_egresos, total_consultas=total_consultas,
         total_grooming=total_grooming, total_creditos=total_creditos,
@@ -3036,6 +3651,16 @@ def reportes():
     conn = database.get_db()
     doctores = database.fetchall(conn, "SELECT nombre FROM doctores ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     hoy_dt = date.today()
     hace7 = (hoy_dt - timedelta(days=7)).isoformat()
     hace30 = (hoy_dt - timedelta(days=30)).isoformat()
@@ -3053,6 +3678,16 @@ def reporte_rango():
     conn = database.get_db()
     doctores = database.fetchall(conn, "SELECT nombre FROM doctores ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     hoy_dt = date.today()
     hace7 = (hoy_dt - timedelta(days=7)).isoformat()
     hace30 = (hoy_dt - timedelta(days=30)).isoformat()
@@ -3103,6 +3738,16 @@ def reporte_csv(tipo):
         conn.close()
         return "Tipo no v\u00e1lido", 404
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     title = titles_map.get(tipo, tipo.capitalize())
     xldata = _excel_file(title, cols, rows, keys, col_widths={"A":8,"B":16,"C":24,"D":14,"E":14,"F":14,"G":14})
     return Response(xldata, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -3132,6 +3777,16 @@ def listar_caja():
     total_pages = max(1, (cnt + per_page - 1) // per_page)
     page = min(page, total_pages)
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_caja.html", movimientos=movimientos,
                            total_ingresos=total_ingresos, total_egresos=total_egresos,
                            hoy_selected=fecha, q=q, tipo_f=tf, page=page, total_pages=total_pages,
@@ -3225,6 +3880,16 @@ def exportar_caja():
         ti = database.fetchone(conn, "SELECT COALESCE(SUM(monto),0) as tot FROM caja WHERE tipo='ingreso'")["tot"]
         te = database.fetchone(conn, "SELECT COALESCE(SUM(monto),0) as tot FROM caja WHERE tipo='egreso'")["tot"]
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Caja"
@@ -3311,6 +3976,16 @@ def listar_cobros():
         LIMIT ? OFFSET ?
     """, params+[per_page, offset])
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     cobros = []
     total_pendiente = 0
     for r in rows:
@@ -3401,6 +4076,8 @@ def exportar_cobros():
             row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
         except:
             row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Border, Side
     wb = openpyxl.Workbook()
@@ -3416,7 +4093,7 @@ def exportar_cobros():
         cell.fill = hdr_fill; cell.font = hdr_font; cell.border = border
     for r, row in enumerate(rows, 2):
         vals = [row["id"], row["animal_nombre"] or "", row["dueno_nombre"] or "",
-                row.get("servicio_nombre", "") or "", row["monto"], row["fecha"] or "",
+                row["servicio_nombre"] or "", row["monto"], row["fecha"] or "",
                 "Cobrado" if row["cobrado"] else "Pendiente",
                 row["cobrado_en"] or "", row["metodo_pago"] or "", row["observacion"] or ""]
         for c, v in enumerate(vals, 1):
@@ -3456,6 +4133,16 @@ def web_mis_consultas():
         LIMIT 100
     """, (doctorname,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("web_mis_consultas.html", consultas=rows, doctor=doctorname)
 
 @app.route("/mis_citas")
@@ -3476,6 +4163,16 @@ def web_mis_citas():
         WHERE c.fecha>? ORDER BY c.fecha ASC, c.id ASC
     """, (hoy,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("web_mis_citas.html",
         citas_hoy=citas_hoy, citas_futuras=citas_futuras, doctor=doctorname, hoy=hoy)
 
@@ -3487,6 +4184,16 @@ def listar_usuarios():
     conn = database.get_db()
     usuarios = database.fetchall(conn, "SELECT * FROM usuarios ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_usuarios.html", items=usuarios, title="Usuarios", active="usuarios", **_ctx())
 
 @app.route("/usuarios/nuevo", methods=["GET","POST"])
@@ -3502,6 +4209,16 @@ def crear_usuario():
         conn.commit(); conn.close()
         return redirect(url_for("listar_usuarios"))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return redirect(url_for("listar_usuarios"))
 
 @app.route("/usuarios/<int:id>/editar", methods=["GET","POST"])
@@ -3526,6 +4243,16 @@ def editar_usuario(id):
         conn.commit(); conn.close()
         return redirect(url_for("listar_usuarios"))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return redirect(url_for("listar_usuarios"))
 
 @app.route("/usuarios/<int:id>/eliminar")
@@ -3544,6 +4271,16 @@ def listar_doctores():
     conn = database.get_db()
     doctores = database.fetchall(conn, "SELECT * FROM doctores ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_doctores.html", items=doctores, title="Doctores", active="doctores", **_ctx())
 
 @app.route("/doctores/nuevo", methods=["GET","POST"])
@@ -3556,6 +4293,16 @@ def crear_doctor():
         conn.commit(); conn.close()
         return redirect(url_for("listar_doctores"))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return redirect(url_for("listar_doctores"))
 
 @app.route("/doctores/<int:id>/editar", methods=["GET","POST"])
@@ -3568,6 +4315,16 @@ def editar_doctor(id):
         conn.commit(); conn.close()
         return redirect(url_for("listar_doctores"))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return redirect(url_for("listar_doctores"))
 
 @app.route("/doctores/<int:id>/eliminar")
@@ -3599,6 +4356,16 @@ def editar_registro(id):
         "SELECT r.*, a.nombre as animal_nombre, a.id as animal_id FROM registros_medicos r "
         "JOIN animales a ON r.id_animal=a.id WHERE r.id=?", (id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     if not r: return "No encontrado", 404
     return render_template("admin_edit_registro.html", r=r, title="Editar Registro", active="", **_ctx())
 
@@ -3621,6 +4388,16 @@ def listar_documentos(id):
     a = database.fetchone(conn, "SELECT id,nombre FROM animales WHERE id=?", (id,))
     docs = database.fetchall(conn, "SELECT * FROM documentos_adjuntos WHERE id_animal=? ORDER BY fecha DESC", (id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     if not a: return "No encontrado", 404
     return render_template("admin_documentos.html", animal=a, documentos=docs, title="Documentos", active="animales", **_ctx())
 
@@ -3648,6 +4425,16 @@ def eliminar_documento(doc_id):
         database.execute(conn, "DELETE FROM documentos_adjuntos WHERE id=?", (doc_id,))
         conn.commit()
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     animal_id = doc["id_animal"] if doc else 0
     return redirect(url_for("listar_documentos", id=animal_id))
 
@@ -3728,6 +4515,16 @@ def historial_clinico(id):
         "AND proxima_dosis<=? ORDER BY proxima_dosis ASC", (id, prox_2))
 
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_historial_clinico.html", a=a,
         registros=registros, vacunas=vacunas, alergias=alergias,
         medicacion=medicacion, examenes=examenes, citas=citas,
@@ -3799,6 +4596,16 @@ def nuevo_historial(id):
         conn.commit(); conn.close()
         return redirect(url_for("historial_clinico", id=id))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_historial_form.html", a=a, now=now,
         title="Nuevo Registro: "+a["nombre"], active="animales", **_ctx())
 
@@ -3870,6 +4677,16 @@ def editar_vacuna(id):
     conn.commit()
     animal_id = database.fetchone(conn, "SELECT id_animal FROM vacunas WHERE id=?", (id,))["id_animal"]
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return redirect(url_for("historial_clinico", id=animal_id))
 
 @app.route("/vacunas/<int:id>/eliminar", methods=["POST"])
@@ -3884,6 +4701,16 @@ def eliminar_vacuna(id):
     else:
         animal_id = 0
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return redirect(url_for("historial_clinico", id=animal_id))
 
 @app.route("/alergias/<int:id>/eliminar", methods=["POST"])
@@ -3898,6 +4725,16 @@ def eliminar_alergia(id):
     else:
         animal_id = 0
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return redirect(url_for("historial_clinico", id=animal_id))
 
 @app.route("/animales/<int:id>/historial/exportar")
@@ -3919,6 +4756,16 @@ def exportar_historial(id):
     examenes = database.fetchall(conn,
         "SELECT * FROM examenes_auxiliares WHERE id_animal=? ORDER BY fecha DESC", (id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_historial_print.html", a=a,
         registros=registros, vacunas=vacunas, alergias=alergias,
         medicacion=medicacion, examenes=examenes,
@@ -3931,6 +4778,16 @@ def api_peso(animal_id):
     data = database.fetchall(conn,
         "SELECT fecha, peso FROM registros_medicos WHERE id_animal=? AND peso IS NOT NULL ORDER BY fecha ASC", (animal_id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return Response(json.dumps([{"fecha": d["fecha"], "peso": d["peso"]} for d in data]),
                     mimetype="application/json")
 
@@ -3942,6 +4799,16 @@ def api_diagnosticos(animal_id):
     data = database.fetchall(conn,
         "SELECT diagnostico, COUNT(*) as cnt FROM registros_medicos WHERE id_animal=? AND diagnostico!='' GROUP BY diagnostico ORDER BY cnt DESC LIMIT 10", (animal_id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return Response(json.dumps([{"diagnostico": d["diagnostico"], "count": d["cnt"]} for d in data]),
                     mimetype="application/json")
 
@@ -3955,6 +4822,16 @@ def receta(registro_id):
         "FROM registros_medicos r JOIN animales a ON r.id_animal=a.id "
         "JOIN duenos d ON a.id_dueno=d.id WHERE r.id=?", (registro_id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     if not r: return "No encontrado", 404
     return render_template("admin_receta.html", r=r, title="Receta", active="", **_ctx())
 
@@ -3972,6 +4849,16 @@ def ficha_clinica(animal_id):
     vacunas = database.fetchall(conn,
         "SELECT fecha, nombre, doctor FROM vacunas WHERE id_animal=? ORDER BY fecha DESC", (animal_id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_ficha.html", a=a, historial=historial, vacunas=vacunas, title="Ficha Cl\u00ednica", active="", **_ctx())
 
 # ===== HISTORIAL CLÍNICO GLOBAL =====
@@ -4005,6 +4892,16 @@ def historial_global():
     edited_animal = request.args.get("edited_animal", type=int)
     edited_dueno = request.args.get("edited_dueno", type=int)
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_historial_global.html", registros=registros, q=q,
         page=page, total_pages=total_pages, total=total,
         edited_animal=edited_animal, edited_dueno=edited_dueno,
@@ -4020,6 +4917,16 @@ def ticket(venta_id):
     items = database.fetchall(conn, "SELECT * FROM venta_items WHERE id_venta=?", (venta_id,))
     pagos = database.fetchall(conn, "SELECT * FROM pagos WHERE id_venta=?", (venta_id,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     # Build WhatsApp link
     tel = (v.get("cliente_telefono") or "").strip()
     msg = "Ticket #" + str(venta_id) + " - S/ " + "%.2f" % v["total"]
@@ -4086,6 +4993,16 @@ def editar_venta(id):
     items = database.fetchall(conn, "SELECT * FROM venta_items WHERE id_venta=?", (id,))
     productos = database.fetchall(conn,"SELECT id,nombre,precio_venta,stock,codigo_barras,por_mayor,descuento_mayorista FROM productos WHERE activo=1 ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_edit_venta.html", v=v, items=items, productos=productos, title="Editar Venta", active="ventas", **_ctx())
 
 # ===== PAGAR VENTA AL CRÉDITO =====
@@ -4110,6 +5027,16 @@ def pagar_venta(id):
         conn.close()
         return redirect(url_for("ver_venta", id=id))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return redirect(url_for("ver_venta", id=id))
 
 # ===== EXPORT EXCEL =====
@@ -4137,6 +5064,16 @@ def exportar_excel(tipo):
     else:
         conn.close(); return "Tipo no v\u00e1lido", 404
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     xldata = _excel_file(title_map.get(tipo, tipo.capitalize()), cols, data, keys, col_widths={"A":8,"B":28,"C":14,"D":14,"E":14,"F":14,"G":14,"H":14,"I":28})
     return Response(xldata, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     headers={"Content-Disposition": f"attachment;filename={tipo}.xlsx"})
@@ -4195,6 +5132,16 @@ def api_caja_semanal():
         egr = database.fetchone(conn, "SELECT COALESCE(SUM(monto),0) as tot FROM caja WHERE fecha=? AND tipo='egreso'", (d,))["tot"]
         rows.append({"fecha": d, "ingresos": ing, "egresos": egr})
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return {"dias": rows}
 
 @app.route("/api/caja/resumen")
@@ -4207,6 +5154,16 @@ def api_caja_resumen():
     ingresos = database.fetchone(conn, "SELECT COALESCE(SUM(monto),0) as tot FROM caja WHERE fecha=? AND tipo='ingreso'", (hoy,))["tot"]
     egresos = database.fetchone(conn, "SELECT COALESCE(SUM(monto),0) as tot FROM caja WHERE fecha=? AND tipo='egreso'", (hoy,))["tot"]
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return {"apertura": apertura, "ingresos": ingresos, "egresos": egresos}
 
 # ===== BACKUP =====
@@ -4242,6 +5199,16 @@ def api_notificaciones():
     cobros_pend = database.fetchone(conn, "SELECT COUNT(*) as cnt FROM cobros_pendientes WHERE cobrado=0")["cnt"]
     stock_bajo = database.fetchone(conn, "SELECT COUNT(*) as cnt FROM productos WHERE activo=1 AND ((stock_minimo IS NOT NULL AND stock<=stock_minimo) OR (stock_minimo IS NULL AND stock<=5))")["cnt"]
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return Response(json.dumps({"citas_hoy": citas_hoy, "cobros_pend": cobros_pend, "stock_bajo": stock_bajo}), mimetype="application/json")
 
 # ===== PWA =====
@@ -4287,6 +5254,16 @@ def suscripcion():
         except:
             pass
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return render_template("admin_suscripcion.html", plan=plan, pagos=pagos,
                            title="Suscripci\u00f3n", active="suscripcion", **_ctx())
 
@@ -4341,6 +5318,16 @@ def api_suscripcion_estado():
     conn = database.get_db()
     plan = database.fetchone(conn, "SELECT * FROM suscripcion_plan WHERE id=1")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     if not plan or plan["estado"] != "activo":
         return {"estado": plan["estado"] if plan else "inactivo"}
     venc = plan.get("fecha_vencimiento")
@@ -4375,6 +5362,16 @@ def api_dni(numero):
     conn = database.get_db()
     local = database.fetchone(conn, "SELECT nombre, dni, telefono, direccion FROM duenos WHERE dni=? AND dni!=''", (numero,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     if local:
         return Response(json.dumps({
             "nombre": local["nombre"], "apellido_paterno": "", "apellido_materno": "",
@@ -4421,6 +5418,16 @@ def api_ruc(numero):
     conn = database.get_db()
     local = database.fetchone(conn, "SELECT nombre, dni, telefono, direccion FROM duenos WHERE dni=? AND dni!=''", (numero,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     if local:
         return Response(json.dumps({
             "nombre": local["nombre"], "direccion": local["direccion"] or ""
@@ -4444,6 +5451,16 @@ def api_categorias():
     conn = database.get_db()
     cats = database.fetchall(conn, "SELECT * FROM categorias ORDER BY nombre")
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return Response(json.dumps([dict(c) for c in cats]), mimetype="application/json")
 
 @app.route("/api/categorias", methods=["POST"])
@@ -4496,6 +5513,16 @@ def api_duenos_crear():
     conn.commit()
     nuevo_id = database.fetchone(conn, "SELECT MAX(id) as id FROM duenos")["id"]
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return Response(json.dumps({"id":nuevo_id,"nombre":nombre,"dni":dni}), mimetype="application/json")
 
 @app.route("/api/pacientes/crear", methods=["POST"])
@@ -4534,6 +5561,16 @@ def api_pacientes_crear():
         except Exception as e:
             logger.warning("Error al guardar foto: %s", e)
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return Response(json.dumps({"id":nuevo_id,"nombre":nombre}), mimetype="application/json")
 
 @app.route("/api/historial/<dni>")
@@ -4541,6 +5578,16 @@ def api_historial(dni):
     conn = database.get_db()
     rows = database.fetchall(conn, "SELECT v.id,v.fecha,v.total,v.tipo_comprobante,v.tipo FROM ventas v WHERE v.cliente_dni=? ORDER BY v.fecha DESC LIMIT 10", (dni,))
     conn.close()
+    import json
+    for row in rows:
+        servicios_raw = row.get("servicios", "[]")
+        try:
+            sv_list = json.loads(servicios_raw) if isinstance(servicios_raw, str) else servicios_raw
+            row["servicio_nombre"] = sv_list[0]["nombre"] if sv_list else ""
+        except:
+            row["servicio_nombre"] = ""
+ except:
+ row[servicio_nombre] = \
     return Response(json.dumps([dict(r) for r in rows]), mimetype="application/json")
 
 @app.errorhandler(404)
