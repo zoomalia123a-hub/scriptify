@@ -1,0 +1,118 @@
+{% extends "admin_base.html" %}
+{% block content %}
+{% set saldo = v.saldo_pendiente|float if v.saldo_pendiente is not none and v.saldo_pendiente|float > 0 else v.total|float %}
+{% set is_credit = v.estado_pago is defined and v.estado_pago == 'pendiente' %}
+<div class="card">
+<div class="form-row-3" style="margin-bottom:16px">
+  <div><strong>Venta #{{ v.id }}</strong></div>
+  <div><strong>Fecha:</strong> {{ v.fecha }}</div>
+  <div><strong>Total:</strong> S/ {{ "%.2f"|format(v.total|float) }}</div>
+  <div><strong>Tipo:</strong> {% if v.tipo == 'mixta' %}<span class="badge badge-info">Mixta</span>{% else %}{{ v.tipo }}{% endif %}</div>
+  <div><strong>Estado:</strong> <span class="badge {% if v.estado=='completada' %}badge-success{% elif v.estado=='anulada' %}badge-danger{% else %}badge-warning{% endif %}">{{ v.estado }}</span></div>
+  <div><strong>Cliente ID:</strong> {{ v.id_cliente or '-' }}</div>
+  <div><strong>DNI/RUC:</strong> {{ v.cliente_dni or '-' }}</div>
+  <div><strong>Cliente:</strong> {{ v.cliente_nombre or '-' }}</div>
+  <div><strong>Comprobante:</strong> {{ v.tipo_comprobante or 'Boleta' }} - {{ v.serie or 'B001' }}-{{ '%05d'|format(v.numero|int) }}</div>
+  <div><strong>M&eacute;todo Pago:</strong> {{ v.metodo_pago or 'efectivo' }}</div>
+  {% if is_credit %}<div><strong>Saldo:</strong> <span style="color:#e74c3c;font-weight:700">S/ {{ "%.2f"|format(saldo) }}</span></div>{% endif %}
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+  <a href="/ticket/{{ v.id }}" class="btn btn-success" target="_blank"><i class="fas fa-receipt"></i> Ticket</a>
+  {% if v.estado == 'completada' %}
+  <a href="/ventas/{{ v.id }}/editar" class="btn btn-warning"><i class="fas fa-edit"></i> Editar</a>
+  <form method="POST" action="/ventas/{{ v.id }}/anular" style="display:inline" onsubmit="var m=prompt('Motivo de anulación (generará Nota de Crédito):','Anulación voluntaria');if(!m)return false;var i=document.createElement('input');i.type='hidden';i.name='motivo_anulacion';i.value=m;this.appendChild(i);return confirm('¿Generar Nota de Crédito y anular?')">
+    <button type="button" class="btn btn-danger" onclick="this.form.querySelector('button[type=submit]').click()"><i class="fas fa-ban"></i> Anular</button>
+    <button type="submit" style="display:none"></button>
+  </form>
+  {% elif nc %}
+  <a href="/nota-credito/{{ nc.id }}" class="btn btn-info"><i class="fas fa-file-invoice"></i> Ver Nota de Crédito</a>
+  {% endif %}
+  {% if is_credit %}<button class="btn btn-primary" onclick="abrirPagoModal()"><i class="fas fa-dollar-sign"></i> Pagar</button>{% endif %}
+</div>
+</div>
+
+<div class="card">
+<h2>Items</h2>
+<table><thead><tr><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Precio Unit.</th><th>Subtotal</th></tr></thead><tbody>
+{% for it in items %}<tr>
+  <td>{{ it.nombre }}</td>
+  <td><span style="font-size:11px;color:var(--text-light)">{{ it.tipo_item }}</span></td>
+  <td>{{ it.cantidad }}</td>
+  <td>S/ {{ "%.2f"|format(it.precio_unitario|float) }}</td>
+  <td>S/ {{ "%.2f"|format(it.subtotal|float) }}</td>
+</tr>{% else %}<tr><td colspan="5"><div class="empty">Sin items</div></td></tr>{% endfor %}
+</tbody></table>
+</div>
+
+{% if v.sunat_estado is defined %}
+<div class="card">
+<h2><i class="fas fa-file-invoice"></i> Comprobante Electronico</h2>
+<div class="form-row-3" style="margin-bottom:12px">
+  <div><strong>Estado SUNAT:</strong>
+    <span class="badge {% if v.sunat_estado=='aceptado' %}badge-success{% elif v.sunat_estado=='pendiente' %}badge-warning{% elif v.sunat_estado=='rechazado' %}badge-danger{% else %}badge-secondary{% endif %}">
+      {{ v.sunat_estado or 'No emitido' }}
+    </span>
+  </div>
+  {% if v.sunat_ticket %}
+  <div><strong>Ticket:</strong> {{ v.sunat_ticket }}</div>
+  {% endif %}
+  {% if v.sunat_fecha_envio %}
+  <div><strong>Enviado:</strong> {{ v.sunat_fecha_envio }}</div>
+  {% endif %}
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+  {% if v.estado == 'completada' and (not v.sunat_estado or v.sunat_estado == 'pendiente' or v.sunat_estado == 'rechazado') %}
+  <form method="POST" action="/ventas/{{ v.id }}/emitir-sunat" style="display:inline">
+    <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> 
+      {% if v.sunat_estado == 'pendiente' %}Reenviar{% else %}Emitir Comprobante{% endif %}
+    </button>
+  </form>
+  {% endif %}
+  {% if v.sunat_ticket and v.sunat_estado != 'aceptado' %}
+  <form method="POST" action="/ventas/{{ v.id }}/check-sunat" style="display:inline">
+    <button type="submit" class="btn btn-info"><i class="fas fa-sync"></i> Consultar Estado</button>
+  </form>
+  {% endif %}
+  {% if v.sunat_cdr_xml %}
+  <a href="/sunat/cdr/{{ v.id }}" class="btn btn-secondary" target="_blank"><i class="fas fa-file-code"></i> Descargar CDR</a>
+  {% endif %}
+</div>
+</div>
+{% endif %}
+
+{% if pagos is defined and pagos|length > 0 %}
+<div class="card">
+<h2>Pagos realizados</h2>
+<table><thead><tr><th>#</th><th>Monto</th><th>M&eacute;todo</th><th>Fecha</th></tr></thead><tbody>
+{% for p in pagos %}<tr>
+  <td>{{ p.id }}</td>
+  <td>S/ {{ "%.2f"|format(p.monto|float) }}</td>
+  <td>{{ p.metodo }}</td>
+  <td>{{ p.fecha }}</td>
+</tr>{% endfor %}
+</tbody></table>
+</div>
+{% endif %}
+
+<div class="modal-overlay" id="modalPago">
+  <div class="modal">
+    <h2>Pagar Venta #{{ v.id }}</h2>
+    <p style="color:var(--text-light);margin-bottom:12px">Saldo pendiente: <strong style="color:#e74c3c;font-size:18px">S/ {{ "%.2f"|format(saldo) }}</strong></p>
+    <form method="POST" action="/ventas/{{ v.id }}/pagar">
+      <div class="form-group"><label>Monto a pagar (S/)</label><input type="number" step="0.01" name="monto" max="{{ saldo }}" value="{{ saldo }}" required></div>
+      <div class="form-group"><label>M&eacute;todo de pago</label><select name="metodo_pago"><option value="efectivo">Efectivo</option><option value="tarjeta">Tarjeta</option><option value="yape">Yape</option><option value="plin">Plin</option><option value="transferencia">Transferencia</option></select></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button type="submit" class="btn btn-success" style="flex:1"><i class="fas fa-check"></i> Pagar</button>
+        <button type="button" class="btn btn-secondary" style="flex:1" onclick="cerrarModal('modalPago')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<a href="/ventas" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Volver</a>
+
+<script>
+function abrirPagoModal(){document.getElementById('modalPago').classList.add('active')}
+function cerrarModal(id){document.getElementById(id).classList.remove('active')}
+</script>
+{% endblock %}

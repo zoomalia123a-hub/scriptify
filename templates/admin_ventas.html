@@ -1,0 +1,64 @@
+{% extends "admin_base.html" %}
+{% block content %}
+{% if ok %}<div class="alert alert-success">{{ ok }}</div>{% endif %}
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<form method="GET" action="/ventas" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;padding:12px;background:var(--card-bg);border:1px solid var(--border);border-radius:8px">
+  <input type="text" name="q" placeholder="Buscar cliente, DNI/RUC, producto..." value="{{ q or '' }}" style="flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+  <input type="date" name="desde" value="{{ desde or '' }}" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+  <input type="date" name="hasta" value="{{ hasta or '' }}" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px">
+  <button type="submit" class="btn btn-primary" style="padding:8px 16px"><i class="fas fa-search"></i> Buscar</button>
+  <a href="/ventas" class="btn btn-secondary" style="padding:8px 16px;text-decoration:none"><i class="fas fa-times"></i> Limpiar</a>
+  <a href="/ventas/exportar?q={{ q }}&desde={{ desde }}&hasta={{ hasta }}" class="btn btn-info" style="padding:8px 16px;text-decoration:none"><i class="fas fa-file-excel"></i> Exportar Excel</a>
+</form>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+  <div><span style="color:var(--text-light);font-size:13px">{{ ventas|length }} venta(s)</span></div>
+  <a href="/ventas/nueva" class="btn btn-primary"><i class="fas fa-plus"></i> Nueva Venta</a>
+</div>
+<div class="card" style="padding:0;overflow-x:auto">
+<table>
+  <thead><tr><th>ID</th><th>Fecha</th><th>Cliente</th><th>DNI/RUC</th><th>Total</th><th>Saldo</th><th>Estado Pago</th><th>Tipo</th><th>Estado</th><th style="width:70px">SUNAT</th><th>Items</th><th>Acciones</th></tr></thead>
+  <tbody>{% for v in ventas %}<tr data-venta-id="{{ v.id }}"><td>{{ v.id }}</td><td>{{ v.fecha }}</td><td>{{ v.cliente_nombre or v.id_cliente or '-' }}</td><td>{{ v.cliente_dni or '-' }}</td><td>S/ {{ "%.2f"|format(v.total|float) }}</td><td>{% if v.saldo_pendiente is defined and v.saldo_pendiente|float > 0 %}S/ {{ "%.2f"|format(v.saldo_pendiente|float) }}{% else %}-{% endif %}</td><td>{% if (v.estado_pago is defined and v.estado_pago == 'pendiente') or (v.saldo_pendiente is defined and v.saldo_pendiente|float > 0) %}<span class="badge badge-warning">Al crédito</span>{% else %}<span class="badge badge-success">Pagado</span>{% endif %}</td><td>{% if v.tipo == 'mixta' %}<span class="badge badge-info">Mixta</span>{% else %}{{ v.tipo }}{% endif %}</td><td><span class="badge {% if v.estado=='completada' %}badge-success{% elif v.estado=='anulada' %}badge-danger{% else %}badge-warning{% endif %}">{{ v.estado }}</span></td><td>{% if v.sunat_estado is defined and v.sunat_estado %}<span class="badge {% if v.sunat_estado=='aceptado' %}badge-success{% elif v.sunat_estado=='pendiente' %}badge-warning{% elif v.sunat_estado=='rechazado' %}badge-danger{% else %}badge-secondary{% endif %}">{{ v.sunat_estado }}</span>{% else %}-{% endif %}</td><td><button class="btn btn-sm btn-secondary" onclick="verItems({{ v.id }})" style="padding:3px 8px;font-size:10px"><i class="fas fa-list"></i></button></td><td style="white-space:nowrap"><a href="/ventas/{{ v.id }}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a> <a href="/ventas/{{ v.id }}/editar" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>{% if v.saldo_pendiente is defined and v.saldo_pendiente|float > 0 %} <a href="/ventas/{{ v.id }}/pagar" class="btn btn-sm btn-success"><i class="fas fa-dollar-sign"></i></a>{% endif %}{% if v.estado=='completada' %} <form method="POST" action="/ventas/{{ v.id }}/anular" style="display:inline" onsubmit="return confirm('¿Anular venta #{{ v.id }}? Se revertirá el stock.')"><button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-ban"></i></button></form>{% endif %}</td></tr>{% else %}<tr><td colspan="11"><div class="empty">No hay ventas</div></td></tr>{% endfor %}</tbody>
+</table>
+</div>
+{% if total_pages and total_pages > 1 %}
+<div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:16px">
+  {% if page > 1 %}
+  <a href="?page={{ page-1 }}{% if q %}&q={{ q }}{% endif %}{% if desde %}&desde={{ desde }}{% endif %}{% if hasta %}&hasta={{ hasta }}{% endif %}" class="btn btn-sm">&laquo; Anterior</a>
+  {% endif %}
+  <span style="color:var(--text-light);font-size:13px">P&aacute;gina {{ page }} de {{ total_pages }}</span>
+  {% if page < total_pages %}
+  <a href="?page={{ page+1 }}{% if q %}&q={{ q }}{% endif %}{% if desde %}&desde={{ desde }}{% endif %}{% if hasta %}&hasta={{ hasta }}{% endif %}" class="btn btn-sm">Siguiente &raquo;</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{# MODAL: Items de Venta #}
+<div class="modal-overlay" id="modalItemsVenta" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal" style="max-width:400px">
+    <h2><i class="fas fa-receipt"></i> Items Venta #<span id="itemsVentaId"></span></h2>
+    <div id="itemsVentaBody" style="font-size:13px"></div>
+    <div style="margin-top:12px"><button type="button" class="btn btn-secondary" onclick="cerrarModalItems()">Cerrar</button></div>
+  </div>
+</div>
+
+<script>
+var _itemsVentaId = null;
+function verItems(ventaId) {
+  _itemsVentaId = ventaId;
+  document.getElementById('itemsVentaId').textContent = ventaId;
+  document.getElementById('itemsVentaBody').innerHTML = '<span style="color:#999">Cargando...</span>';
+  document.getElementById('modalItemsVenta').classList.add('active');
+  fetch('/api/ventas/' + ventaId + '/items').then(function(r){ return r.json(); }).then(function(data){
+    if (!data || data.length === 0) { document.getElementById('itemsVentaBody').innerHTML = '<div class="empty">Sin items</div>'; return; }
+    var html = '<table><thead><tr><th>Item</th><th>Cant</th><th>Subtotal</th></tr></thead><tbody>';
+    data.forEach(function(it){
+      var tag = it.tipo_item === 'servicio_medico' ? '<span class="badge badge-info">M</span>' : it.tipo_item === 'servicio_grooming' ? '<span class="badge badge-success">G</span>' : '<span class="badge badge-secondary">P</span>';
+      html += '<tr><td>' + tag + ' ' + (it.nombre||'') + '</td><td>' + it.cantidad + '</td><td>S/ ' + parseFloat(it.subtotal).toFixed(2) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('itemsVentaBody').innerHTML = html;
+  }).catch(function(){ document.getElementById('itemsVentaBody').innerHTML = '<span style="color:#e74c3c">Error al cargar</span>'; });
+}
+function cerrarModalItems(){ document.getElementById('modalItemsVenta').classList.remove('active'); }
+</script>
+{% endblock %}

@@ -1,4 +1,4 @@
-import os, re, json
+import os, re, json, hashlib
 from datetime import date, datetime
 
 DB_URL = os.environ.get('DATABASE_URL')
@@ -43,8 +43,9 @@ def get_db():
         conn = pg.connect(DB_URL)
         return conn
     import sqlite3
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA busy_timeout=5000")
     return conn
 
 def _exec(conn, sql, params=None):
@@ -76,25 +77,21 @@ def _last_id(cur):
 
 def fetchone(conn, sql, params=None):
     cur = _exec(conn, sql, params)
-    if _using_pg():
-        from psycopg2.extras import RealDictCursor
-        row = cur.fetchone()
-        return dict(row) if row else None
-    return cur.fetchone()
+    row = cur.fetchone()
+    return dict(row) if row else None
 
 def fetchall(conn, sql, params=None):
     cur = _exec(conn, sql, params)
-    if _using_pg():
-        from psycopg2.extras import RealDictCursor
-        rows = cur.fetchall()
-        return [dict(r) for r in rows]
-    return cur.fetchall()
+    rows = cur.fetchall()
+    return [dict(r) for r in rows]
 
 def execute(conn, sql, params=None):
     return _exec(conn, sql, params)
 
 def init_db():
     conn = get_db()
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
 
     schema = '''
         CREATE TABLE IF NOT EXISTS doctores (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT UNIQUE);
@@ -126,6 +123,7 @@ def init_db():
             id_animal INTEGER NOT NULL,
             id_dueno INTEGER NOT NULL,
             fecha TEXT NOT NULL,
+            hora TEXT DEFAULT '',
             motivo TEXT DEFAULT '',
             tipo TEXT DEFAULT 'veterinaria',
             precio REAL DEFAULT 0,
@@ -179,7 +177,8 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre TEXT NOT NULL, descripcion TEXT DEFAULT '',
             precio_compra REAL NOT NULL DEFAULT 0, precio_venta REAL NOT NULL DEFAULT 0,
-            stock INTEGER NOT NULL DEFAULT 0, categoria TEXT DEFAULT 'General', activo INTEGER DEFAULT 1
+            stock INTEGER NOT NULL DEFAULT 0, categoria TEXT DEFAULT 'General', activo INTEGER DEFAULT 1,
+            en_catalogo INTEGER DEFAULT 1
         );
         CREATE TABLE IF NOT EXISTS servicios_grooming (
             id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT NOT NULL, descripcion TEXT DEFAULT '',
@@ -212,6 +211,12 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             fecha TEXT NOT NULL, tipo TEXT NOT NULL, concepto TEXT,
             monto REAL NOT NULL, referencia_tipo TEXT, referencia_id INTEGER
+        );
+        CREATE TABLE IF NOT EXISTS pagos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_venta INTEGER NOT NULL, monto REAL NOT NULL,
+            metodo TEXT DEFAULT 'efectivo', fecha TEXT NOT NULL,
+            FOREIGN KEY (id_venta) REFERENCES ventas(id)
         );
         CREATE TABLE IF NOT EXISTS creditos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -256,6 +261,101 @@ def init_db():
             FOREIGN KEY (id_registro) REFERENCES registros_medicos(id),
             FOREIGN KEY (id_producto) REFERENCES productos(id)
         );
+        CREATE TABLE IF NOT EXISTS stock_movimientos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_producto INTEGER NOT NULL,
+            tipo TEXT NOT NULL,
+            cantidad INTEGER NOT NULL,
+            stock_anterior INTEGER NOT NULL DEFAULT 0,
+            stock_nuevo INTEGER NOT NULL DEFAULT 0,
+            referencia_tipo TEXT DEFAULT '',
+            referencia_id INTEGER DEFAULT NULL,
+            descripcion TEXT DEFAULT '',
+            fecha TEXT NOT NULL,
+            FOREIGN KEY (id_producto) REFERENCES productos(id)
+        );
+        CREATE TABLE IF NOT EXISTS servicio_insumos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_servicio INTEGER NOT NULL,
+            id_producto INTEGER NOT NULL,
+            cantidad INTEGER NOT NULL DEFAULT 1,
+            FOREIGN KEY (id_servicio) REFERENCES servicios_medicos(id),
+            FOREIGN KEY (id_producto) REFERENCES productos(id)
+        );
+        CREATE TABLE IF NOT EXISTS combos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL, descripcion TEXT DEFAULT '',
+            precio_total REAL NOT NULL DEFAULT 0, activo INTEGER DEFAULT 1
+        );
+        CREATE TABLE IF NOT EXISTS combo_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_combo INTEGER NOT NULL,
+            tipo_item TEXT NOT NULL,
+            referencia_id INTEGER,
+            nombre TEXT NOT NULL,
+            cantidad INTEGER NOT NULL DEFAULT 1,
+            precio_unitario REAL NOT NULL DEFAULT 0,
+            FOREIGN KEY (id_combo) REFERENCES combos(id)
+        );
+        CREATE TABLE IF NOT EXISTS proveedores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL, contacto TEXT DEFAULT '',
+            telefono TEXT DEFAULT '', email TEXT DEFAULT '',
+            direccion TEXT DEFAULT '', ruc TEXT DEFAULT '', activo INTEGER DEFAULT 1
+        );
+        CREATE TABLE IF NOT EXISTS ordenes_compra (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_proveedor INTEGER NOT NULL,
+            fecha TEXT NOT NULL, estado TEXT DEFAULT 'pendiente',
+            total REAL NOT NULL DEFAULT 0, observaciones TEXT DEFAULT '',
+            FOREIGN KEY (id_proveedor) REFERENCES proveedores(id)
+        );
+        CREATE TABLE IF NOT EXISTS orden_compra_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_orden INTEGER NOT NULL,
+            id_producto INTEGER NOT NULL,
+            cantidad INTEGER NOT NULL DEFAULT 1,
+            precio_unitario REAL NOT NULL DEFAULT 0,
+            subtotal REAL NOT NULL DEFAULT 0,
+            FOREIGN KEY (id_orden) REFERENCES ordenes_compra(id),
+            FOREIGN KEY (id_producto) REFERENCES productos(id)
+        );
+        CREATE TABLE IF NOT EXISTS categorias (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT UNIQUE NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS notas_credito (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_venta INTEGER NOT NULL,
+            serie TEXT NOT NULL DEFAULT 'NC01',
+            numero INTEGER NOT NULL DEFAULT 0,
+            fecha TEXT NOT NULL,
+            subtotal REAL NOT NULL DEFAULT 0,
+            igv REAL NOT NULL DEFAULT 0,
+            total REAL NOT NULL DEFAULT 0,
+            motivo TEXT DEFAULT '',
+            estado TEXT DEFAULT 'emitida',
+            FOREIGN KEY (id_venta) REFERENCES ventas(id)
+        );
+        CREATE TABLE IF NOT EXISTS suscripcion_plan (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            estado TEXT DEFAULT 'inactivo',
+            plan TEXT DEFAULT 'mensual',
+            precio REAL DEFAULT 99,
+            fecha_creacion TEXT,
+            fecha_inicio TEXT,
+            fecha_vencimiento TEXT,
+            notas TEXT DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS suscripcion_pagos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            monto REAL NOT NULL,
+            fecha_pago TEXT NOT NULL,
+            metodo TEXT DEFAULT 'manual',
+            comprobante TEXT DEFAULT '',
+            notas TEXT DEFAULT '',
+            registrado_por TEXT DEFAULT ''
+        );
     '''
     _exec_script(conn, schema)
     conn.commit()
@@ -263,7 +363,13 @@ def init_db():
     admin = fetchone(conn, "SELECT id FROM usuarios WHERE username=?", ('admin',))
     if not admin:
         execute(conn, "INSERT INTO usuarios (username, password, nombre, rol) VALUES (?,?,?,?)",
-                ('admin', 'admin123', 'Administrador', 'admin'))
+                ('admin', hashlib.sha256(b'admin123').hexdigest(), 'Administrador', 'admin'))
+    conn.commit()
+    # Migrate plaintext passwords to hashed
+    for u in fetchall(conn, "SELECT id, password FROM usuarios"):
+        if u["password"] and len(u["password"]) != 64:
+            execute(conn, "UPDATE usuarios SET password=? WHERE id=?",
+                    (hashlib.sha256(u["password"].encode()).hexdigest(), u["id"]))
     conn.commit()
 
     if not _using_pg():
@@ -293,6 +399,46 @@ def init_db():
             "ALTER TABLE registros_medicos ADD COLUMN id_venta INTEGER DEFAULT NULL",
             "ALTER TABLE registros_medicos ADD COLUMN proximo_control TEXT",
             "ALTER TABLE productos ADD COLUMN fecha_vencimiento TEXT",
+            "ALTER TABLE ventas ADD COLUMN cliente_dni TEXT DEFAULT ''",
+            "ALTER TABLE ventas ADD COLUMN cliente_nombre TEXT DEFAULT ''",
+            "ALTER TABLE ventas ADD COLUMN cliente_telefono TEXT DEFAULT ''",
+            "ALTER TABLE ventas ADD COLUMN descuento REAL DEFAULT 0",
+            "ALTER TABLE ventas ADD COLUMN igv REAL DEFAULT 0",
+            "ALTER TABLE ventas ADD COLUMN subtotal REAL DEFAULT 0",
+            "ALTER TABLE ventas ADD COLUMN saldo_pendiente REAL DEFAULT 0",
+            "ALTER TABLE ventas ADD COLUMN estado_pago TEXT DEFAULT 'pagado'",
+            "ALTER TABLE venta_items ADD COLUMN descuento REAL DEFAULT 0",
+            "ALTER TABLE venta_items ADD COLUMN descuento_tipo TEXT DEFAULT 'soles'",
+            "ALTER TABLE citas ADD COLUMN hora TEXT DEFAULT ''",
+            "ALTER TABLE productos ADD COLUMN stock_minimo INTEGER DEFAULT 5",
+            "ALTER TABLE venta_items ADD COLUMN id_producto INTEGER DEFAULT NULL",
+            "ALTER TABLE productos ADD COLUMN codigo_barras TEXT DEFAULT ''",
+            "ALTER TABLE productos ADD COLUMN foto TEXT DEFAULT ''",
+            "ALTER TABLE productos ADD COLUMN por_mayor INTEGER DEFAULT 0",
+            "ALTER TABLE productos ADD COLUMN descuento_mayorista REAL DEFAULT 0",
+            "ALTER TABLE productos ADD COLUMN colores TEXT DEFAULT ''",
+            "ALTER TABLE productos ADD COLUMN en_catalogo INTEGER DEFAULT 1",
+            "ALTER TABLE ventas ADD COLUMN serie TEXT DEFAULT 'B001'",
+            "ALTER TABLE ventas ADD COLUMN numero INTEGER DEFAULT 0",
+            "ALTER TABLE caja ADD COLUMN metodo_pago TEXT DEFAULT 'efectivo'",
+            "ALTER TABLE caja ADD COLUMN observacion TEXT DEFAULT ''",
+            "ALTER TABLE caja ADD COLUMN comprobante TEXT DEFAULT ''",
+            "ALTER TABLE productos ADD COLUMN vende_por_kilo INTEGER DEFAULT 0",
+            "ALTER TABLE productos ADD COLUMN precio_kilo REAL DEFAULT 0",
+            "ALTER TABLE cobros_pendientes ADD COLUMN cobrado INTEGER DEFAULT 0",
+            "ALTER TABLE cobros_pendientes ADD COLUMN cobrado_en TEXT DEFAULT ''",
+            "ALTER TABLE cobros_pendientes ADD COLUMN metodo_pago TEXT DEFAULT 'efectivo'",
+            "ALTER TABLE cobros_pendientes ADD COLUMN observacion TEXT DEFAULT ''",
+            "ALTER TABLE cobros_pendientes ADD COLUMN comprobante TEXT DEFAULT ''",
+
+        "ALTER TABLE ventas ADD COLUMN sunat_estado TEXT DEFAULT 'pendiente'",
+        "ALTER TABLE ventas ADD COLUMN sunat_ticket TEXT DEFAULT ''",
+        "ALTER TABLE ventas ADD COLUMN sunat_cdr_xml TEXT DEFAULT ''",
+        "ALTER TABLE ventas ADD COLUMN sunat_hash TEXT DEFAULT ''",
+        "ALTER TABLE ventas ADD COLUMN sunat_fecha_envio TEXT DEFAULT ''",
+        "ALTER TABLE ventas ADD COLUMN cliente_direccion TEXT DEFAULT ''",
+        "ALTER TABLE duenos ADD COLUMN ruc TEXT DEFAULT ''",
+            "CREATE TABLE IF NOT EXISTS series (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT UNIQUE NOT NULL, serie TEXT NOT NULL, ultimo_numero INTEGER DEFAULT 0)",
         ]
         for m in migrations:
             try:
@@ -306,6 +452,22 @@ def init_db():
     init_productos_default()
     init_servicios_grooming_default()
     init_servicios_medicos_default()
+    init_combos_default()
+    init_categorias_data()
+    init_series_default()
+
+def init_categorias_data():
+    conn = get_db()
+    existing = fetchone(conn, 'SELECT COUNT(*) as cnt FROM categorias')
+    cnt = existing['cnt'] if existing else 0
+    if cnt == 0:
+        for name in ['General','Medicamentos','Alimentos','Accesorios','Higiene','Laboratorio','Cirug\u00eda']:
+            try:
+                execute(conn, "INSERT INTO categorias (nombre) VALUES (?)", (name,))
+            except:
+                pass
+        conn.commit()
+    conn.close()
 
 def init_doctores_data():
     conn = get_db()
@@ -363,6 +525,50 @@ def init_servicios_grooming_default():
         conn.commit()
     conn.close()
 
+def init_combos_default():
+    conn = get_db()
+    existing = fetchone(conn, 'SELECT COUNT(*) as cnt FROM combos')
+    cnt = existing['cnt'] if existing else 0
+    if cnt == 0:
+        execute(conn, "INSERT INTO combos (nombre,descripcion,precio_total) VALUES (?,?,?)",
+            ('Paquete Vacunaci\u00f3n', 'Consulta general + vacuna + desparasitante interno', 85))
+        cid = fetchone(conn, "SELECT MAX(id) as id FROM combos")["id"]
+        execute(conn, "INSERT INTO combo_items (id_combo,tipo_item,referencia_id,nombre,cantidad,precio_unitario) VALUES (?,?,?,?,?,?)",
+            (cid, 'servicio_medico', 1, 'Consulta General', 1, 50))
+        execute(conn, "INSERT INTO combo_items (id_combo,tipo_item,referencia_id,nombre,cantidad,precio_unitario) VALUES (?,?,?,?,?,?)",
+            (cid, 'servicio_medico', 11, 'Tratamiento Antipulgas', 1, 35))
+
+        execute(conn, "INSERT INTO combos (nombre,descripcion,precio_total) VALUES (?,?,?)",
+            ('Paquete Esterilizaci\u00f3n', 'Cirug\u00eda de esterilizaci\u00f3n + medicaci\u00f3n + collar isabelino', 320))
+        cid = fetchone(conn, "SELECT MAX(id) as id FROM combos")["id"]
+        execute(conn, "INSERT INTO combo_items (id_combo,tipo_item,referencia_id,nombre,cantidad,precio_unitario) VALUES (?,?,?,?,?,?)",
+            (cid, 'servicio_medico', 6, 'Esterilizacion', 1, 250))
+        execute(conn, "INSERT INTO combo_items (id_combo,tipo_item,referencia_id,nombre,cantidad,precio_unitario) VALUES (?,?,?,?,?,?)",
+            (cid, 'servicio_medico', 8, 'Medicacion Inyectable', 1, 25))
+
+        execute(conn, "INSERT INTO combos (nombre,descripcion,precio_total) VALUES (?,?,?)",
+            ('Paquete Ba\u00f1o Completo', 'Ba\u00f1o general + corte completo + corte de u\u00f1as', 65))
+        cid = fetchone(conn, "SELECT MAX(id) as id FROM combos")["id"]
+        execute(conn, "INSERT INTO combo_items (id_combo,tipo_item,referencia_id,nombre,cantidad,precio_unitario) VALUES (?,?,?,?,?,?)",
+            (cid, 'servicio_grooming', 1, 'Ba\u00f1o General', 1, 25))
+        execute(conn, "INSERT INTO combo_items (id_combo,tipo_item,referencia_id,nombre,cantidad,precio_unitario) VALUES (?,?,?,?,?,?)",
+            (cid, 'servicio_grooming', 4, 'Corte Completo', 1, 45))
+        execute(conn, "INSERT INTO combo_items (id_combo,tipo_item,referencia_id,nombre,cantidad,precio_unitario) VALUES (?,?,?,?,?,?)",
+            (cid, 'servicio_grooming', 8, 'Corte de Unas', 1, 10))
+
+        execute(conn, "INSERT INTO combos (nombre,descripcion,precio_total) VALUES (?,?,?)",
+            ('Kit Higiene Completo', 'Shampoo medicado + cepillado dental + limpieza de o\u00eddos', 75))
+        cid = fetchone(conn, "SELECT MAX(id) as id FROM combos")["id"]
+        execute(conn, "INSERT INTO combo_items (id_combo,tipo_item,referencia_id,nombre,cantidad,precio_unitario) VALUES (?,?,?,?,?,?)",
+            (cid, 'producto', 5, 'Shampoo Medicado', 1, 45))
+        execute(conn, "INSERT INTO combo_items (id_combo,tipo_item,referencia_id,nombre,cantidad,precio_unitario) VALUES (?,?,?,?,?,?)",
+            (cid, 'servicio_grooming', 6, 'Cepillado Dental', 1, 20))
+        execute(conn, "INSERT INTO combo_items (id_combo,tipo_item,referencia_id,nombre,cantidad,precio_unitario) VALUES (?,?,?,?,?,?)",
+            (cid, 'servicio_grooming', 7, 'Limpieza de Oidos', 1, 15))
+
+        conn.commit()
+    conn.close()
+
 def init_servicios_medicos_default():
     conn = get_db()
     existing = fetchone(conn, 'SELECT COUNT(*) as cnt FROM servicios_medicos')
@@ -389,6 +595,15 @@ def init_servicios_medicos_default():
         conn.commit()
     conn.close()
 
+def get_categorias(conn=None):
+    close = conn is None
+    if close:
+        conn = get_db()
+    cats = fetchall(conn, "SELECT * FROM categorias ORDER BY nombre")
+    if close:
+        conn.close()
+    return [c["nombre"] for c in cats]
+
 def backup_database():
     if _using_pg():
         return
@@ -403,6 +618,16 @@ def backup_database():
         backups = sorted([f for f in os.listdir(backup_dir) if f.endswith('.db')])
         while len(backups) > 10:
             os.remove(os.path.join(backup_dir, backups.pop(0)))
+
+def init_series_default():
+    conn = get_db()
+    for tipo, serie in [('Boleta', 'B001'), ('Factura', 'F001'), ('Nota de Venta', 'NV001'), ('Nota Credito', 'NC01')]:
+        try:
+            execute(conn, "INSERT INTO series (tipo, serie, ultimo_numero) VALUES (?,?,0)", (tipo, serie))
+        except:
+            pass
+    conn.commit()
+    conn.close()
 
 if __name__ == '__main__':
     init_db()
