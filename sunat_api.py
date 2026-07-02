@@ -1,5 +1,10 @@
 import requests
 import json
+from datetime import datetime, timezone, timedelta
+
+PERU_TZ = timezone(timedelta(hours=-5))
+def _peru_now():
+    return datetime.now(PERU_TZ)
 
 def _config():
     import os
@@ -60,12 +65,13 @@ def consultar_estado(ticket):
 
 def armar_comprobante(venta, items):
     from datetime import datetime
-    tipo_doc = "factura" if venta.get("tipo_comprobante") == "Factura" else "boleta"
+    es_nc = venta.get("tipo_comprobante") == "Nota Credito"
+    tipo_doc = "nota_credito" if es_nc else ("factura" if venta.get("tipo_comprobante") == "Factura" else "boleta")
     tiene_dni_valido = bool(venta.get("cliente_dni")) and len(venta.get("cliente_dni", "")) == 11
     es_factura = tipo_doc == "factura"
-    if es_factura:
+    if es_factura or es_nc:
         cliente_tipo = "6"
-        cliente_num = venta.get("cliente_dni") or "00000000"
+        cliente_num = venta.get("cliente_dni") or "00000000000"
     else:
         cliente_tipo = "1"
         cliente_num = venta.get("cliente_dni") or "00000000"
@@ -78,12 +84,11 @@ def armar_comprobante(venta, items):
     total_gravada = 0.0
     total_exonerada = 0.0
     total_igv = 0.0
-    total_item_sum = 0.0
     for it in items:
         cantidad = float(it.get("cantidad") or it.get("cant", 1))
         precio_unitario = float(it.get("precio_unitario") or it.get("precio", 0))
-        subtotal_item = float(it.get("subtotal", 0))
-        if tiene_igv and tipo_doc == "factura":
+        base_item = round(precio_unitario * cantidad, 2)
+        if tiene_igv and (es_factura or es_nc):
             valor_unitario = round(precio_unitario / 1.18, 6)
             base_item = round(valor_unitario * cantidad, 2)
             igv_item = round(base_item * 0.18, 2)
@@ -96,7 +101,6 @@ def armar_comprobante(venta, items):
         else:
             valor_unitario = round(precio_unitario, 6)
             igv_item = 0
-            base_item = round(valor_unitario * cantidad, 2)
             total_item = base_item
             total_exonerada += base_item
             pct_igv = "0"
@@ -118,15 +122,14 @@ def armar_comprobante(venta, items):
             "igv": str(round(igv_item, 2)),
             "total": str(round(total_item, 2)),
         })
-        total_item_sum += round(total_item, 2)
     total_general = round(total_gravada + total_exonerada + total_igv, 2)
     data = {
         "documento": tipo_doc,
         "serie": venta.get("serie", "B001"),
         "numero": int(venta.get("numero", 0)),
-        "fecha_de_emision": venta.get("fecha", ""),
-        "fecha_de_vencimiento": venta.get("fecha", ""),
-        "hora_de_emision": venta.get("hora", datetime.now().strftime("%H:%M:%S")),
+        "fecha_de_emision": _peru_now().strftime("%Y-%m-%d"),
+        "fecha_de_vencimiento": _peru_now().strftime("%Y-%m-%d"),
+        "hora_de_emision": _peru_now().strftime("%H:%M:%S"),
         "tipo_operacion": "0101",
         "moneda": "PEN",
         "cliente_tipo_de_documento": cliente_tipo,
@@ -139,4 +142,14 @@ def armar_comprobante(venta, items):
         "total": str(round(total_general, 2)),
         "items": sunat_items,
     }
+    if es_nc:
+        doc_ref = "factura" if venta.get("original_tipo") == "Factura" else "boleta"
+        data["nota_credito_codigo_tipo"] = "01"
+        data["nota_credito_motivo"] = venta.get("motivo_nota", "Anulacion voluntaria")
+        data["documento_afectado"] = {
+            "documento": doc_ref,
+            "serie": venta.get("original_serie", ""),
+            "numero": int(venta.get("original_numero", 0)),
+        }
+
     return data

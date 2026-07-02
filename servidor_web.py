@@ -1101,7 +1101,7 @@ def nueva_venta():
         servicios_groom=servicios_groom, combos=combos, clientes=clientes, title="Nueva Venta", active="ventas", por_mayor_count=por_mayor_count, **_ctx())
 
 def _generar_comprobante(conn, tipo):
-    if tipo not in ('Boleta', 'Factura', 'Nota de Venta'):
+    if tipo not in ('Boleta', 'Factura', 'Nota de Venta', 'Nota Credito'):
         tipo = 'Boleta'
     row = database.fetchone(conn, "SELECT serie, ultimo_numero FROM series WHERE tipo=?", (tipo,))
     if not row:
@@ -1286,13 +1286,20 @@ def anular_venta(id):
             cfg = sunat_api._config()
             if cfg.get("enabled") and v:
                 original = database.fetchone(conn, "SELECT serie, numero, sunat_estado FROM ventas WHERE id=?", (id,))
-                if original and original.get("sunat_estado") in ("aceptado", "pendiente"):
+                if original and original.get("sunat_estado") in ("aceptado", "pendiente") and v.get("tipo_comprobante") == "Factura":
                     nc_items = database.fetchall(conn, "SELECT * FROM venta_items WHERE id_venta=?", (id,))
                     nc_venta_dict = {
-                        "tipo_comprobante": "Nota Credito", "serie": original["serie"], "numero": original["numero"],
-                        "fecha": str(date.today()), "cliente_dni": v.get("cliente_dni","") or "",
-                        "cliente_nombre": v.get("cliente_nombre","") or "", "cliente_direccion": "",
+                        "tipo_comprobante": "Nota Credito",
+                        "serie": serie, "numero": numero,
+                        "fecha": str(date.today()),
+                        "cliente_dni": v.get("cliente_dni","") or "",
+                        "cliente_nombre": v.get("cliente_nombre","") or "",
+                        "cliente_direccion": "",
                         "subtotal": nc_subtotal, "igv": nc_igv, "total": nc_total,
+                        "original_tipo": v.get("tipo_comprobante", ""),
+                        "original_serie": original["serie"],
+                        "original_numero": original["numero"],
+                        "motivo_nota": motivo,
                     }
                     sunat_data = sunat_api.armar_comprobante(nc_venta_dict, nc_items)
                     res = sunat_api.emitir_comprobante(sunat_data)

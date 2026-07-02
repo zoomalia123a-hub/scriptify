@@ -1,1 +1,0 @@
-cd /opt/scriptyfy && rm -f servidor_web_corrupted.py git_push.sh && git add -A && git commit -m "Remove temporary files" && git push origin main
